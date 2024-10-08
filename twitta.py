@@ -10,8 +10,10 @@ from datetime import datetime
 import jsonschema
 from jsonschema import validate
 import tweepy.errors
+import signal
+import sys
 
-__version__ = "0.2"
+__version__ = "0.2.1"
 
 # Setup logging for real-time output
 logger = logging.getLogger()
@@ -156,7 +158,7 @@ def reply_to_tweets():
                             reply_text = get_chatgpt_response(prompt)
                             logger.info(f"ChatGPT Reply: {reply_text}")
 
-                            choice = input(f"Would you like to post this tweet?: @{account} {reply_text}")
+                            choice = input(f"Would you like to post this tweet?: \"@{account} {reply_text}\" (y/n): ")
                             if choice == "y":
                                 client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
                                 logger.info(f"Replied to @{account}: {reply_text}")
@@ -190,7 +192,15 @@ def interactive_prompt():
         else:
             print("Invalid command.")
 
+# Handler for Ctrl+C (KeyboardInterrupt)
+def handle_exit(signum, frame):
+    logger.info("Exiting program due to Ctrl+C...")
+    sys.exit(0)
+
 if __name__ == "__main__":
+    # Register the Ctrl+C handler
+    signal.signal(signal.SIGINT, handle_exit)
+    
     logger.info(f"Starting twitta {__version__}...")
     config = load_config()
     logger.info(f"Configuration loaded.")
