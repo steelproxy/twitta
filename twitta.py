@@ -144,9 +144,13 @@ def reply_to_tweets():
                             # Use the configured reply prompt
                             prompt = config['reply_prompt'].format(tweet_text=tweet.text)
                             reply_text = get_chatgpt_response(prompt)
-                            # Uncomment the next line to enable tweeting
-                            # client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id)
-                            logger.info(f"Replied to @{account}: {reply_text}")
+                            logging.info(f"ChatGPT Reply: {reply_text}")
+                            
+                            # Ask to tweet
+                            dry_run = input("Would you like to post this tweet? y/n")
+                            if dry_run == "y":
+                                client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id)
+                                logger.info(f"Replied to @{account}: {reply_text}")
 
                             # Mark this tweet as replied
                             replied_tweet_ids.add(tweet.id)
@@ -157,7 +161,7 @@ def reply_to_tweets():
             logger.info(f"Waiting for {wait} seconds...")
             time.sleep(wait)  # Avoid hitting rate limits
         except Exception as e:
-            logger.error(f"General error while fetching tweets for @{account}: {e}")
+            logger.error(f"General error while fetching tweets for @{account}: {e}. Waiting 60 seconds...")
             time.sleep(60)  # Wait before trying again in case of rate limit
 
 def add_account(account):
@@ -195,5 +199,5 @@ if __name__ == "__main__":
         reply_to_tweets()
         # Generate a random wait time between 5 to 15 minutes (300 to 900 seconds)
         wait_time = random.randint(60, 61)
-        logger.info(f"Waiting for {wait_time} seconds before the next check.")
+        logger.info(f"Waiting for {wait_time} seconds before the next tweet check.")
         time.sleep(wait_time)  # Random wait time
