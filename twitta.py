@@ -9,8 +9,9 @@ import random
 from datetime import datetime
 import jsonschema
 from jsonschema import validate
+import tweepy.errors
 
-__version__ = "0.1"
+__version__ = "0.2"
 
 # Setup logging for real-time output
 logger = logging.getLogger()
@@ -155,15 +156,14 @@ def reply_to_tweets():
                             reply_text = get_chatgpt_response(prompt)
                             logger.info(f"ChatGPT Reply: {reply_text}")
 
-                            # Ask to tweet
-                            dry_run = input("Would you like to post this tweet? y/n: ")
-                            if dry_run.lower() == "y":
-                                client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id)
+                            choice = input(f"Would you like to post this tweet?: @{account} {reply_text}")
+                            if choice == "y":
+                                client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
                                 logger.info(f"Replied to @{account}: {reply_text}")
 
                             # Mark this tweet as replied
                             replied_tweet_ids.add(tweet.id)
-                        except tweepy.TweepError as e:
+                        except tweepy.errors.TweepyException as e:
                             logger.error(f"Tweepy error while replying to @{account}: {e}")
                         except Exception as e:
                             logger.error(f"General error while replying to @{account}: {e}")
