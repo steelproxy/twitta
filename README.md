@@ -52,6 +52,7 @@ cd twitta
 - Execute the script using Python:
 
 ```bash
+chmod +x ./twitta.py
 python twitta.py
 ```
 
@@ -71,6 +72,7 @@ For those who prefer not to run the script manually, you can download the latest
 
 4. Run the binary: Execute the binary directly. Enter your shell of choice and run:
 ```bash
+chmod +x ./twitta
 ./twitta
 ```
 ## Usage
