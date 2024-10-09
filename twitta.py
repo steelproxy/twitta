@@ -146,14 +146,14 @@ def reply_to_tweets():
             user = client.get_user(username=account)
             if user.data:
                 user_id = user.data.id
-                tweets = client.get_users_tweets(user_id, max_results=10, tweet_fields=['created_at', 'text', 'attachments'])
-
+                tweets = client.get_users_tweets(user_id, max_results=5, tweet_fields=['created_at', 'text', 'attachments'])
+                logger.info(f"Tweets read...")
                 for tweet in tweets.data:
-                    logger.info(f"Tweet read: {tweet.text}")
                     tweet_created_at = tweet.created_at.replace(tzinfo=None)
 
                     if tweet_created_at > start_time and tweet.id not in replied_tweet_ids:
                         try:
+                            logger.info(f"New tweet detected! Here: {tweet.text}")
                             prompt = custom_prompt.format(tweet_text=tweet.text)
                             reply_text = get_chatgpt_response(prompt)
                             logger.info(f"ChatGPT Reply: {reply_text}")
@@ -185,7 +185,7 @@ def interactive_prompt():
         command = input("Enter 'add' to add an account, 'run' to run: ")
         if command == 'add':
             account = input("Enter the Twitter account to reply to (without @): ")
-            custom_prompt = input("Enter a custom reply prompt (leave blank for default): ")
+            custom_prompt = input("Enter a custom reply prompt (leave blank for default) (use {tweet_text} as placeholder): ")
             add_account(account, custom_prompt if custom_prompt else None)
         elif command == 'run':
             break
