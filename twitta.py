@@ -13,7 +13,7 @@ import tweepy.errors
 import signal
 import sys
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 # Setup logging for real-time output
 logger = logging.getLogger()
