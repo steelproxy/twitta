@@ -162,6 +162,9 @@ def reply_to_tweets():
                             if choice == "y":
                                 client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
                                 logger.info(f"Replied to @{account}: {reply_text}")
+                                wait = random.randint(30, 63)
+                                logger.info(f"Waiting for {wait} seconds till next reply...")
+                                time.sleep(wait)  # Avoid hitting rate limits
 
                             # Mark this tweet as replied
                             replied_tweet_ids.add(tweet.id)
@@ -170,9 +173,6 @@ def reply_to_tweets():
                         except Exception as e:
                             logger.error(f"General error while replying to @{account}: {e}")
 
-            wait = random.randint(30, 63)
-            logger.info(f"Waiting for {wait} seconds...")
-            time.sleep(wait)  # Avoid hitting rate limits
         except tweepy.errors.TweepyException as e:
             logger.error(f"Tweepy error while fetching tweets for @{account}: {e}. Waiting 60 seconds...")
             time.sleep(60)  # Wait before trying again in case of rate limit
