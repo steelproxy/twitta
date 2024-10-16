@@ -14,6 +14,7 @@ import signal
 import sys
 
 __version__ = "0.2.1"
+__default_prompt__ = "Reply to this tweet: {tweet_text}"
 
 # Setup logging for real-time output
 logger = logging.getLogger()
@@ -64,9 +65,14 @@ config_schema = {
                 "type": "object",
                 "properties": {
                     "username": {"type": "string"},
+                    "use_gpt": {"type": "boolean"},  # Changed to use_gpt
                     "custom_prompt": {"type": "string"},
+                    "predefined_replies": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
                 },
-                "required": ["username"],
+                "required": ["username", "use_gpt"],  # Added use_gpt to required fields
             },
         },
     },
@@ -116,17 +122,19 @@ def create_config():
     logger.info("New configuration file created.")
     return config
 
-def add_account(account, custom_prompt=None):
+def add_account(account, use_gpt=True, custom_prompt=None, predefined_replies=None):
     account_info = {
         'username': account,
-        'custom_prompt': custom_prompt if custom_prompt else "Reply to this tweet: {tweet_text}"
+        'use_gpt': use_gpt,
+        'custom_prompt': custom_prompt if custom_prompt else __default_prompt__,
+        'predefined_replies': predefined_replies if predefined_replies else []
     }
 
     config['accounts_to_reply'].append(account_info)
     with open('config.json', 'w') as config_file:
-        json.dump(config, config_file)
+        json.dump(config, config_file, indent=4)
 
-    logger.info(f"Added @{account} to reply list with prompt: {account_info['custom_prompt']}")
+    logger.info(f"Added @{account} to reply list with gpt prompt: {account_info['custom_prompt']} and predefined replies: {account_info['predefined_replies']} [USING GPT {str(use_gpt)}]")
 
 def get_chatgpt_response(prompt):
     try:
@@ -140,8 +148,10 @@ def get_chatgpt_response(prompt):
 def reply_to_tweets():
     for account_info in config['accounts_to_reply']:
         account = account_info['username']
+        use_gpt = account_info['use_gpt']
         custom_prompt = account_info['custom_prompt']
-
+        predefined_replies = account_info['predefined_replies']
+        
         try:
             user = client.get_user(username=account)
             if user.data:
@@ -154,9 +164,13 @@ def reply_to_tweets():
 
                     if tweet_created_at > start_time and tweet.id not in replied_tweet_ids:
                         try:
-                            prompt = custom_prompt.format(tweet_text=tweet.text)
-                            reply_text = get_chatgpt_response(prompt)
-                            logger.info(f"ChatGPT Reply: {reply_text}")
+                            if use_gpt:
+                                prompt = custom_prompt.format(tweet_text=tweet.text)
+                                reply_text = get_chatgpt_response(prompt)
+                            else:
+                                reply_text = random.choice(predefined_replies) if predefined_replies else "No predefined replies available."
+
+                            logger.info(f"Reply: {reply_text}")
 
                             choice = input(f"Would you like to post this tweet?: \"@{account} {reply_text}\" (y/n): ")
                             if choice == "y":
@@ -185,8 +199,11 @@ def interactive_prompt():
         command = input("Enter 'add' to add an account, 'run' to run: ")
         if command == 'add':
             account = input("Enter the Twitter account to reply to (without @): ")
+            use_gpt = input("Use ChatGPT for replies? (y/n): ").strip().lower() == 'y'
             custom_prompt = input("Enter a custom reply prompt (leave blank for default): ")
-            add_account(account, custom_prompt if custom_prompt else None)
+            predefined_replies = input("Enter predefined replies separated by commas: ").split(',')
+            predefined_replies = [reply.strip() for reply in predefined_replies if reply.strip()]  # Clean up whitespace
+            add_account(account, use_gpt, custom_prompt if custom_prompt else None, predefined_replies)
         elif command == 'run':
             break
         else:
