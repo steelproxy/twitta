@@ -190,13 +190,13 @@ def reply_to_tweets(auto_reply):
                             if not auto_reply:
                                 choice = input(f"Would you like to post this tweet?: \"@{account} {reply_text}\" (y/n): ")
                                 if choice == "y":
-                                    #client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
+                                    client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
                                     logger.info(f"Replied to @{account}: {reply_text}")
                                     wait = random.randint(30, 63)
                                     logger.info(f"Waiting for {wait} seconds till next reply...")
                                     time.sleep(wait)  # Avoid hitting rate limits
                             else:
-                                #client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
+                                client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
                                 logger.info(f"Replied to @{account}: {reply_text}")
                                 wait = random.randint(30, 63)
                                 logger.info(f"Waiting for {wait} seconds till next reply...")
