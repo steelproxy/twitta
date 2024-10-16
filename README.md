@@ -70,11 +70,14 @@ For those who prefer not to run the script manually, you can download the latest
 
 3. Configure the JSON file: Ensure you have a config.json file set up as described in the "Setup" section.
 
-4. Run the binary: Execute the binary directly. Enter your shell of choice and run:
+4. Run the binary: Execute the binary directly.
+- On macOS/Linux enter your shell of choice and run:
 ```bash
 chmod +x ./twitta
 ./twitta
 ```
+- On Windows simply double click the executable
+  
 ## Usage
 - Enter 'add' to add a Twitter account to the reply list.
 - Enter 'run' to start the bot, which will begin monitoring the specified accounts for tweets.

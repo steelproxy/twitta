@@ -13,7 +13,7 @@ import tweepy.errors
 import signal
 import sys
 
-__version__ = "0.2.1"
+__version__ = "0.2.3"
 __default_prompt__ = "Reply to this tweet: {tweet_text}"
 
 # Setup logging for real-time output
@@ -156,10 +156,9 @@ def reply_to_tweets():
             user = client.get_user(username=account)
             if user.data:
                 user_id = user.data.id
-                tweets = client.get_users_tweets(user_id, max_results=10, tweet_fields=['created_at', 'text', 'attachments'])
-
+                tweets = client.get_users_tweets(user_id, max_results=5, tweet_fields=['created_at', 'text', 'attachments'])
+                logger.info(f"Tweets read...")
                 for tweet in tweets.data:
-                    logger.info(f"Tweet read: {tweet.text}")
                     tweet_created_at = tweet.created_at.replace(tzinfo=None)
 
                     if tweet_created_at > start_time and tweet.id not in replied_tweet_ids:
