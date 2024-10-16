@@ -91,15 +91,15 @@ def load_config():
     with open('config.json') as config_file:
         config = json.load(config_file)
 
-    if config['version'] != __version__:
-        logger.error(f"Configuration file version does not match twitta version [current version: {__version__}, config version: {config['version']}] recommend deleting config.json and restarting twitta!")
-
     # Validate the JSON structure
     try:
         validate(instance=config, schema=config_schema)
     except jsonschema.ValidationError as e:
         logger.error(f"Configuration file is invalid: {e.message}")
         raise
+
+    if config['version'] != __version__:
+        logger.error(f"Configuration file version does not match twitta version [current version: {__version__}, config version: {config['version']}] recommend deleting config.json and restarting twitta!")
 
     return config
 
