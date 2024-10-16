@@ -41,6 +41,9 @@ logger.addHandler(console_handler)
 config_schema = {
     "type": "object",
     "properties": {
+        "version": {
+            "type": "string"
+        },
         "twitter": {
             "type": "object",
             "properties": {
@@ -88,6 +91,9 @@ def load_config():
     with open('config.json') as config_file:
         config = json.load(config_file)
 
+    if config['version'] != __version__:
+        logger.error(f"Configuration file version does not match twitta version [current version: {__version__}, config version: {config['version']}] recommend deleting config.json and restarting twitta!")
+
     # Validate the JSON structure
     try:
         validate(instance=config, schema=config_schema)
@@ -111,6 +117,7 @@ def create_config():
     }
 
     config = {
+        'version': __version__,
         'twitter': twitter_config,
         'openai': openai_config,
         'accounts_to_reply': [],  # Will be filled with account details
@@ -145,7 +152,7 @@ def get_chatgpt_response(prompt):
         logger.error(f"Error getting response from OpenAI: {e}")
         return "Sorry, I couldn't process that."
 
-def reply_to_tweets():
+def reply_to_tweets(auto_reply):
     for account_info in config['accounts_to_reply']:
         account = account_info['username']
         use_gpt = account_info['use_gpt']
@@ -157,29 +164,45 @@ def reply_to_tweets():
             if user.data:
                 user_id = user.data.id
                 tweets = client.get_users_tweets(user_id, max_results=5, tweet_fields=['created_at', 'text', 'attachments'])
-                logger.info(f"Tweets read...")
+                logger.info(f"Tweets fetched...")
                 for tweet in tweets.data:
                     tweet_created_at = tweet.created_at.replace(tzinfo=None)
 
                     if tweet_created_at > start_time and tweet.id not in replied_tweet_ids:
                         try:
+                            logger.info(f"Tweet replying to: {tweet.text}")
                             if use_gpt:
                                 prompt = custom_prompt.format(tweet_text=tweet.text)
-                                reply_text = get_chatgpt_response(prompt)
+                                if not auto_reply:
+                                    while True:
+                                        reply_text = get_chatgpt_response(prompt)
+                                        choice = input(f"Is this response ok? {reply_text} (y/n/e - will be regenerated if n - e will edit prompt for this run): ")
+                                        if choice == "y":
+                                            break
+                                        if choice == "e": 
+                                            new_prompt = input("Enter a new prompt using {tweet_text} as a placeholder for the tweet: ")
+                                            prompt = custom_prompt.format(tweet_text=new_prompt)
+                                else:
+                                    reply_text = get_chatgpt_response(prompt)
                             else:
                                 reply_text = random.choice(predefined_replies) if predefined_replies else "No predefined replies available."
 
-                            logger.info(f"Reply: {reply_text}")
-
-                            choice = input(f"Would you like to post this tweet?: \"@{account} {reply_text}\" (y/n): ")
-                            if choice == "y":
-                                client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
+                            if not auto_reply:
+                                choice = input(f"Would you like to post this tweet?: \"@{account} {reply_text}\" (y/n): ")
+                                if choice == "y":
+                                    #client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
+                                    logger.info(f"Replied to @{account}: {reply_text}")
+                                    wait = random.randint(30, 63)
+                                    logger.info(f"Waiting for {wait} seconds till next reply...")
+                                    time.sleep(wait)  # Avoid hitting rate limits
+                            else:
+                                #client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
                                 logger.info(f"Replied to @{account}: {reply_text}")
                                 wait = random.randint(30, 63)
                                 logger.info(f"Waiting for {wait} seconds till next reply...")
                                 time.sleep(wait)  # Avoid hitting rate limits
 
-                            # Mark this tweet as replied
+                            # Mark this tweet as replied - might change this behavior to reflect choice
                             replied_tweet_ids.add(tweet.id)
                         except tweepy.errors.TweepyException as e:
                             logger.error(f"Tweepy error while replying to @{account}: {e}")
@@ -195,16 +218,18 @@ def reply_to_tweets():
 
 def interactive_prompt():
     while True:
-        command = input("Enter 'add' to add an account, 'run' to run: ")
+        command = input("Enter 'add' to add an account, 'run' to run, 'run-headless' to run without user input: ")
         if command == 'add':
             account = input("Enter the Twitter account to reply to (without @): ")
             use_gpt = input("Use ChatGPT for replies? (y/n): ").strip().lower() == 'y'
-            custom_prompt = input("Enter a custom reply prompt (leave blank for default): ")
+            custom_prompt = input("Enter a custom reply prompt (leave blank for default) (use {tweet_text} as a placeholder for your tweet.): ")
             predefined_replies = input("Enter predefined replies separated by commas: ").split(',')
             predefined_replies = [reply.strip() for reply in predefined_replies if reply.strip()]  # Clean up whitespace
             add_account(account, use_gpt, custom_prompt if custom_prompt else None, predefined_replies)
         elif command == 'run':
-            break
+            return False
+        elif command == 'run-headless':
+            return True
         else:
             print("Invalid command.")
 
@@ -233,10 +258,11 @@ if __name__ == "__main__":
     logger.info(f"Start time is: {start_time}")
     replied_tweet_ids = set()
     
-    interactive_prompt()
+    auto_reply = interactive_prompt()
 
     while True:
-        reply_to_tweets()
+        logger.info(f"Running in auto-reply mode: {str(auto_reply)}")
+        reply_to_tweets(auto_reply)
         wait_time = random.randint(60, 120)
         logger.info(f"Waiting for {wait_time} seconds before the next tweet check.")
         time.sleep(wait_time)  # Random wait time
