@@ -17,7 +17,7 @@ Twitta is a Python script that automates replying to tweets using the OpenAI API
 - `openai` library
 - `jsonschema` library
 
-You can install the required libraries using pip:
+If running the script using python you can install the required libraries using pip:
 
 ```bash
 pip install tweepy openai jsonschema
@@ -71,7 +71,7 @@ For those who prefer not to run the script manually, you can download the latest
 3. Configure the JSON file: Ensure you have a config.json file set up as described in the "Setup" section.
 
 4. Run the binary: Execute the binary directly.
-- On macOS/Linux enter your shell of choice and run:
+- On macOS enter your shell of choice and run:
 ```bash
 chmod +x ./twitta
 ./twitta
@@ -81,7 +81,8 @@ chmod +x ./twitta
 ## Usage
 - Enter 'add' to add a Twitter account to the reply list.
 - Enter 'run' to start the bot, which will begin monitoring the specified accounts for tweets.
-
+- Enter 'run-headless' to start the bot, which will begin monitoring the specified accounts for tweets and reply automatically.
+- 
 ## Logging
 All logs will be written to twitta.log in the same directory. You can check this file for detailed information about the bot's activities and any errors that occur.
 
