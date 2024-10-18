@@ -160,10 +160,17 @@ def reply_to_tweets(auto_reply):
         predefined_replies = account_info['predefined_replies']
         
         try:
+            # App rate limit (Application-only): 300 requests per 15-minute window shared among all users of your app
+            # User rate limit (User context): 900 requests per 15-minute window per each authenticated user
             user = client.get_user(username=account)
+            
             if user.data:
                 user_id = user.data.id
+                
+                # App rate limit (Application-only): 1500 requests per 15-minute window shared among all users of your app
+                # User rate limit (User context): 900 requests per 15-minute window per each authenticated user
                 tweets = client.get_users_tweets(user_id, max_results=5, tweet_fields=['created_at', 'text', 'attachments'])
+                
                 logger.info(f"Tweets fetched...")
                 for tweet in tweets.data:
                     tweet_created_at = tweet.created_at.replace(tzinfo=None)
@@ -190,13 +197,17 @@ def reply_to_tweets(auto_reply):
                             if not auto_reply:
                                 choice = input(f"Would you like to post this tweet?: \"@{account} {reply_text}\" (y/n): ")
                                 if choice == "y":
+                                    #User rate limit (User context): 200 requests per 15-minute window per each authenticated user
                                     client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
+                                    
                                     logger.info(f"Replied to @{account}: {reply_text}")
                                     wait = random.randint(30, 63)
                                     logger.info(f"Waiting for {wait} seconds till next reply...")
                                     time.sleep(wait)  # Avoid hitting rate limits
                             else:
+                                # User rate limit (User context): 200 requests per 15-minute window per each authenticated user
                                 client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
+                                
                                 logger.info(f"Replied to @{account}: {reply_text}")
                                 wait = random.randint(30, 63)
                                 logger.info(f"Waiting for {wait} seconds till next reply...")
