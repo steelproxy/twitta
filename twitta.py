@@ -14,7 +14,7 @@ import signal
 import sys
 
 __version__ = "0.2.3"
-__default_prompt__ = "Reply to this tweet: {tweet_text}"
+__default_prompt__ = "Make sure not to include commentary or anything extra in your response, just raw text. Reply to this tweet: {tweet_text}"
 
 # Setup logging for real-time output
 logger = logging.getLogger()
