@@ -163,7 +163,6 @@ def get_chatgpt_response(prompt):
         return "Sorry, I couldn't process that."
     
 def is_rate_limited(user_id):
-    """Check if the user is rate limited and manage request counts."""
     now = datetime.now()
     # Remove timestamps older than 15 minutes
     request_timestamps[:] = [ts for ts in request_timestamps if ts > now - timedelta(minutes=15)]
@@ -189,7 +188,6 @@ def is_rate_limited(user_id):
     return user_request_counts[user_id]
 
 def increment_request_count(user_id):
-    """Increment request count for a user."""
     user_request_counts[user_id]['count'] += 1
     request_timestamps.append(datetime.now())
 
@@ -220,12 +218,15 @@ def reply_to_tweets(auto_reply):
             # App rate limit (Application-only): 300 requests per 15-minute window shared among all users of your app
             # User rate limit (User context): 900 requests per 15-minute window per each authenticated user
             user = client.get_user(username=account)
-            
-            # Increment the request count for fetching user
-            increment_request_count(user_id)
-            
+    
             if user.data:
                 user_id = user.data.id
+                            
+                # Increment the request count for fetching user
+                increment_request_count(user_id)
+                
+                # Check if rate limited
+                is_rate_limited(user_id)
                 
                 # App rate limit (Application-only): 1500 requests per 15-minute window shared among all users of your app
                 # User rate limit (User context): 900 requests per 15-minute window per each authenticated user
@@ -233,6 +234,9 @@ def reply_to_tweets(auto_reply):
                 
                 # Increment the request count for fetching user
                 increment_request_count(user_id)
+                
+                # Check if rate limited
+                is_rate_limited(user_id)
                 
                 logger.info(f"Tweets fetched...")
                 for tweet in tweets.data:
@@ -247,6 +251,8 @@ def reply_to_tweets(auto_reply):
                                 if not auto_reply:
                                     choice = input(f"Would you like to post this tweet?: \"@{account} {reply_text}\" (y/n): ")
                                     if choice == "y":
+                                        # Check if rate limited
+                                        is_rate_limited(user_id)
                                         client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
                                         increment_request_count(user_id)
                                         logger.info(f"Replied to @{account}: {reply_text}")
@@ -256,6 +262,8 @@ def reply_to_tweets(auto_reply):
                                     else:
                                         logger.info(f"Skipping tweet...")
                                 else:
+                                    # Check if rate limited
+                                    is_rate_limited(user_id)
                                     client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
                                     increment_request_count(user_id)
                                     logger.info(f"Replied to @{account}: {reply_text}")
