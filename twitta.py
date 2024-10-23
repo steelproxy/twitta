@@ -6,15 +6,25 @@ import logging
 import time
 import os
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 import jsonschema
 from jsonschema import validate
 import tweepy.errors
 import signal
 import sys
 
+# Rate limits
+APP_RATE_LIMIT = 300  # app limit: 300 requests per 15 min
+USER_RATE_LIMIT = 900  # user limit: 900 requests per 15 min
+USER_REPLY_LIMIT = 200  # user reply limit: 200 requests per 15 min
+
 __version__ = "0.2.3"
 __default_prompt__ = "Make sure not to include commentary or anything extra in your response, just raw text. Reply to this tweet: {tweet_text}"
+
+# Track request counts and timestamps
+request_timestamps = []
+user_request_counts = {}
+user_request_times = {}
 
 # Setup logging for real-time output
 logger = logging.getLogger()
@@ -151,6 +161,37 @@ def get_chatgpt_response(prompt):
     except Exception as e:
         logger.error(f"Error getting response from OpenAI: {e}")
         return "Sorry, I couldn't process that."
+    
+def is_rate_limited(user_id):
+    """Check if the user is rate limited and manage request counts."""
+    now = datetime.now()
+    # Remove timestamps older than 15 minutes
+    request_timestamps[:] = [ts for ts in request_timestamps if ts > now - timedelta(minutes=15)]
+    
+    # Count app requests
+    if len(request_timestamps) >= APP_RATE_LIMIT:
+        logger.warning("App rate limit reached. Waiting until reset...")
+        wait_time = 15 * 60 - (now - request_timestamps[0]).total_seconds()
+        time.sleep(max(0, wait_time))
+    
+    # Check user limits
+    if user_id not in user_request_counts:
+        user_request_counts[user_id] = {'count': 0, 'first_request_time': now}
+    
+    # Check if user limit is reached
+    if user_request_counts[user_id]['count'] >= USER_RATE_LIMIT:
+        logger.warning(f"User {user_id} rate limit reached. Waiting until reset...")
+        wait_time = 15 * 60 - (now - user_request_counts[user_id]['first_request_time']).total_seconds()
+        time.sleep(max(0, wait_time))
+        user_request_counts[user_id]['count'] = 0  # Reset after waiting
+        user_request_counts[user_id]['first_request_time'] = now
+    
+    return user_request_counts[user_id]
+
+def increment_request_count(user_id):
+    """Increment request count for a user."""
+    user_request_counts[user_id]['count'] += 1
+    request_timestamps.append(datetime.now())
 
 def reply_to_tweets(auto_reply):
     for account_info in config['accounts_to_reply']:
@@ -164,12 +205,18 @@ def reply_to_tweets(auto_reply):
             # User rate limit (User context): 900 requests per 15-minute window per each authenticated user
             user = client.get_user(username=account)
             
+            # Increment the request count for fetching user
+            increment_request_count(user_id)
+            
             if user.data:
                 user_id = user.data.id
                 
                 # App rate limit (Application-only): 1500 requests per 15-minute window shared among all users of your app
                 # User rate limit (User context): 900 requests per 15-minute window per each authenticated user
                 tweets = client.get_users_tweets(user_id, max_results=5, tweet_fields=['created_at', 'text', 'attachments'])
+                
+                # Increment the request count for fetching user
+                increment_request_count(user_id)
                 
                 logger.info(f"Tweets fetched...")
                 for tweet in tweets.data:
@@ -199,7 +246,7 @@ def reply_to_tweets(auto_reply):
                                 if choice == "y":
                                     #User rate limit (User context): 200 requests per 15-minute window per each authenticated user
                                     client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
-                                    
+                                    increment_request_count(user_id)
                                     logger.info(f"Replied to @{account}: {reply_text}")
                                     wait = random.randint(30, 63)
                                     logger.info(f"Waiting for {wait} seconds till next reply...")
@@ -207,7 +254,7 @@ def reply_to_tweets(auto_reply):
                             else:
                                 # User rate limit (User context): 200 requests per 15-minute window per each authenticated user
                                 client.create_tweet(text=f"@{account} {reply_text}", in_reply_to_tweet_id=tweet.id, user_auth=True)
-                                
+                                increment_request_count(user_id)
                                 logger.info(f"Replied to @{account}: {reply_text}")
                                 wait = random.randint(30, 63)
                                 logger.info(f"Waiting for {wait} seconds till next reply...")
