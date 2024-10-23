@@ -13,8 +13,9 @@ import tweepy.errors
 import signal
 import sys
 
-__version__ = "0.2.3"
+__version__ = "0.2.4"
 __default_prompt__ = "Reply to this tweet: {tweet_text}"
+__binary__ = False
 
 # Setup logging for real-time output
 logger = logging.getLogger()
@@ -84,7 +85,7 @@ config_schema = {
 
 # Load configuration with error checking
 def load_config():
-    if not os.path.exists('config.json'):
+    if not os.path.exists('config.json'): # does not work with binary version
         logger.warning("Configuration file not found. Creating a new one.")
         return create_config()
 
@@ -220,12 +221,31 @@ def interactive_prompt():
     while True:
         command = input("Enter 'add' to add an account, 'run' to run, 'run-headless' to run without user input: ")
         if command == 'add':
-            account = input("Enter the Twitter account to reply to (without @): ")
+            new_account = input("Enter the Twitter account to reply to (without @): ")
+            
+            duplicate = False # probably not the cleanest way to do this
+            for account_info in config['accounts_to_reply']:
+                if new_account == account_info['username']:
+                    logger.error(f"Unable to add user {new_account}! Account already exists in config.")
+                    duplicate = True
+                    break
+            if duplicate:
+                continue
+            
             use_gpt = input("Use ChatGPT for replies? (y/n): ").strip().lower() == 'y'
             custom_prompt = input("Enter a custom reply prompt (leave blank for default) (use {tweet_text} as a placeholder for your tweet.): ")
-            predefined_replies = input("Enter predefined replies separated by commas: ").split(',')
-            predefined_replies = [reply.strip() for reply in predefined_replies if reply.strip()]  # Clean up whitespace
-            add_account(account, use_gpt, custom_prompt if custom_prompt else None, predefined_replies)
+            
+            predefined_reply_prompt = "Enter a predefined reply you would like to add (press enter on empty prompt when finished adding replies): " # same with this
+            predefined_replies = []
+            predefined_reply = input(predefined_reply_prompt)
+            while True:
+                predefined_reply = input(predefined_reply_prompt)
+                if predefined_reply != "":
+                    predefined_replies += [predefined_reply.strip()]
+                else:
+                    break
+            
+            add_account(new_account, use_gpt, custom_prompt if custom_prompt else None, predefined_replies)
         elif command == 'run':
             return False
         elif command == 'run-headless':

@@ -24,9 +24,10 @@ pip install tweepy openai jsonschema
 ```
 
 ## Setup
+This section is for people who would not like to use the pyinstaller compiled binary.
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/twitta.git
+git clone https://github.com/steelproxy/twitta.git
 cd twitta
 ```
 2. Create a configuration file:
@@ -73,9 +74,12 @@ For those who prefer not to run the script manually, you can download the latest
 4. Run the binary: Execute the binary directly.
 - On macOS enter your shell of choice and run:
 ```bash
+cd <directory of downloaded executable>
 chmod +x ./twitta
 ./twitta
 ```
+You may have to allow in security and privacy settings.
+
 - On Windows simply double click the executable
   
 ## Usage
