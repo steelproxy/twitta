@@ -89,7 +89,7 @@ config_schema = {
             },
         },
     },
-    "required": ["twitter", "openai", "accounts_to_reply"],
+    "required": ["version", "twitter", "openai", "accounts_to_reply"],
 }
 
 # Load configuration with error checking
@@ -280,10 +280,12 @@ def reply_to_tweets(auto_reply):
                             logger.error(f"General error while replying to @{account}: {e}")
 
         except tweepy.errors.TweepyException as e:
-            logger.error(f"Tweepy error while fetching tweets for @{account}: {e}. Waiting 60 seconds...")
+            message = str(e).replace('\n', ' ')
+            logger.error(f"Tweepy error while fetching tweets for @{account}: \"{message}\" Waiting 60 seconds...")
             time.sleep(60)  # Wait before trying again in case of rate limit
         except Exception as e:
-            logger.error(f"General error while fetching tweets for @{account}: {e}. Waiting 60 seconds...")
+            message = str(e).replace('\n', ' ')
+            logger.error(f"General error while fetching tweets for @{account}: \"{message}\" Waiting 60 seconds...")
             time.sleep(60)  # Wait before trying again
 
 def interactive_prompt():
