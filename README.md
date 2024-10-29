@@ -17,12 +17,6 @@ Twitta is a Python script that automates replying to tweets using the OpenAI API
 - `openai` library
 - `jsonschema` library
 
-If running the script using python you can install the required libraries using pip:
-
-```bash
-pip install tweepy openai jsonschema
-```
-
 ## Setup
 This section is for people who would not like to use the pyinstaller compiled binary.
 1. Clone the repository:
@@ -30,7 +24,15 @@ This section is for people who would not like to use the pyinstaller compiled bi
 git clone https://github.com/steelproxy/twitta.git
 cd twitta
 ```
-2. Create a configuration file:
+2: Make a virtual environment and install required dependencies
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install tweepy
+pip install openai
+pip install jsonschema
+```
+3. Create a configuration file [OPTIONAL]:
 
 - If you don’t have a config.json file, the script will prompt you to create one on the first run. Alternatively, create it manually in the following format:
 
