@@ -88,7 +88,7 @@ You may have to allow in security and privacy settings.
 - Enter 'add' to add a Twitter account to the reply list.
 - Enter 'run' to start the bot, which will begin monitoring the specified accounts for tweets.
 - Enter 'run-headless' to start the bot, which will begin monitoring the specified accounts for tweets and reply automatically.
-- 
+  
 ## Logging
 All logs will be written to twitta.log in the same directory. You can check this file for detailed information about the bot's activities and any errors that occur.
 
