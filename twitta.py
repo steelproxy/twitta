@@ -1,4 +1,5 @@
 import json
+import subprocess
 import openai
 from openai import OpenAI
 import tweepy
@@ -20,6 +21,7 @@ USER_REPLY_LIMIT = 200  # user reply limit: 200 requests per 15 min
 
 __version__ = "0.2.4"
 __default_prompt__ = "Make sure not to include commentary or anything extra in your response, just raw text. Reply to this tweet: {tweet_text}"
+__config_file__ = "config.json"
 
 # Track request counts and timestamps
 request_timestamps = []
@@ -92,13 +94,22 @@ config_schema = {
     "required": ["version", "twitter", "openai", "accounts_to_reply"],
 }
 
+def _get_config_path():
+    # determine if application is a script file or frozen exe
+    if getattr(sys, 'frozen', False):
+        application_path = os.path.dirname(sys.executable)
+    elif __file__:
+        application_path = os.path.dirname(__file__)
+
+    return os.path.join(application_path, __config_file__)
+
 # Load configuration with error checking
 def load_config():
-    if not os.path.exists('config.json'): # does not work with binary version
+    if not os.path.exists(_get_config_path()): # does not work with binary version
         logger.warning("Configuration file not found. Creating a new one.")
         return create_config()
 
-    with open('config.json') as config_file:
+    with open(_get_config_path()) as config_file:
         config = json.load(config_file)
 
     # Validate the JSON structure
@@ -126,7 +137,7 @@ def create_config():
         'accounts_to_reply': []
     }
 
-    with open('config.json', 'w') as config_file:
+    with open(_get_config_path(), 'w') as config_file:
         json.dump(config, config_file, indent=4)
 
     logger.info("New configuration file created.")
@@ -141,7 +152,7 @@ def add_account(account, use_gpt=True, custom_prompt=None, predefined_replies=No
     }
 
     config['accounts_to_reply'].append(account_info)
-    with open('config.json', 'w') as config_file:
+    with open(_get_config_path(), 'w') as config_file:
         json.dump(config, config_file, indent=4)
 
     logger.info(f"Added @{account} to reply list with gpt prompt: {account_info['custom_prompt']} and predefined replies: {account_info['predefined_replies']} [USING GPT {str(use_gpt)}]")
@@ -285,6 +296,24 @@ def interactive_prompt():
         else:
             print("Invalid command.")
 
+def update_repo():  # Update code from GitHub
+    """Run the update script to fetch the latest code from GitHub."""
+        # determine if application is a script file or frozen exe
+    if getattr(sys, 'frozen', False):
+        return # TODO: add binary updater 
+    else:
+        try:
+            subprocess.run(["git", "--version"], 
+                        check=True, capture_output=True)  # Verify git installation
+            subprocess.run(["git", "pull"], check=True)     # Pull latest changes
+            logger.info("Repository updated successfully.")
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            logger.warning("Git not found in PATH. Skipping update...")
+            logger.info("Proceeding with the current version...")
+        except Exception as e:
+            logger.error(f"Unexpected exception occured while updating: {e}")
+            
+
 # Handler for Ctrl+C (KeyboardInterrupt)
 def handle_exit(signum, frame):
     logger.info("Exiting program due to Ctrl+C...")
@@ -293,6 +322,9 @@ def handle_exit(signum, frame):
 if __name__ == "__main__":
     # Register the Ctrl+C handler
     signal.signal(signal.SIGINT, handle_exit)
+    
+    logger.info("Checking for updates...")
+    update_repo()
     
     logger.info(f"Starting twitta {__version__}...")
     config = load_config()
