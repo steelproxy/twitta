@@ -13,6 +13,11 @@ import jsonschema
 from jsonschema import validate
 import signal
 import sys
+import requests
+import platform
+from packaging import version
+
+APP_REPO = "https://api.github.com/repos/steelproxy/twitta/releases/latest"
 
 # Rate limits
 APP_RATE_LIMIT = 300  # app limit: 300 requests per 15 min
@@ -300,7 +305,54 @@ def update_repo():  # Update code from GitHub
     """Run the update script to fetch the latest code from GitHub."""
         # determine if application is a script file or frozen exe
     if getattr(sys, 'frozen', False):
-        return # TODO: add binary updater 
+        try:
+
+            # Get current executable path and version
+            current_exe = sys.executable
+            current_version = version.parse(__version__)
+            system = platform.system().lower()
+            
+            # Get latest release from GitHub
+            response = requests.get(APP_REPO)
+            if response.status_code != 200:
+                raise Exception("Failed to fetch release info")
+                
+            release_data = response.json()
+            latest_version = version.parse(release_data['tag_name'].lstrip('v'))
+            
+            # Check if update is needed
+            if latest_version <= current_version:
+                logger.info(f"Already running latest version {current_version}")
+                return
+                
+            # Find matching asset for current platform
+            asset = None
+            for a in release_data['assets']:
+                if system in a['name'].lower():
+                    asset = a
+                    break
+                    
+            if not asset:
+                raise Exception(f"No release found for {system}")
+                
+            # Download new version
+            logging.info(f"Downloading update {latest_version}...")
+            response = requests.get(asset['browser_download_url'], stream=True)
+            
+            # Save to temporary file
+            import tempfile
+            temp_path = tempfile.mktemp()
+            with open(temp_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+                    
+            # Replace current executable
+            os.replace(temp_path, current_exe)
+            logger.info("Update complete! Please restart the application.")
+            
+        except Exception as e:
+            logger.error(f"Unexpected exception occured while updating: {e}")
+            logger.info("Proceeding with current version...")
     else:
         try:
             subprocess.run(["git", "--version"], 
