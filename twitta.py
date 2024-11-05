@@ -19,7 +19,7 @@ APP_RATE_LIMIT = 300  # app limit: 300 requests per 15 min
 USER_RATE_LIMIT = 900  # user limit: 900 requests per 15 min
 USER_REPLY_LIMIT = 200  # user reply limit: 200 requests per 15 min
 
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 __default_prompt__ = "Make sure not to include commentary or anything extra in your response, just raw text. Reply to this tweet: {tweet_text}"
 __config_file__ = "config.json"
 
