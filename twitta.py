@@ -4,7 +4,6 @@ import openai
 from openai import OpenAI
 import tweepy
 import tweepy.errors
-import logging
 import time
 import os
 import random
@@ -16,6 +15,7 @@ import sys
 import requests
 import platform
 from packaging import version
+from log import logger
 
 APP_REPO = "https://api.github.com/repos/steelproxy/twitta/releases/latest"
 
@@ -33,26 +33,6 @@ request_timestamps = []
 user_request_counts = {}
 user_request_times = {}
 
-# Setup logging for real-time output
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-# Create a file handler
-file_handler = logging.FileHandler('twitta.log')
-file_handler.setLevel(logging.INFO)
-
-# Create a console handler for real-time logging
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-
-# Create a formatter and set it for both handlers
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
-
-# Add the handlers to the logger
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
 
 # Define the JSON schema
 config_schema = {
