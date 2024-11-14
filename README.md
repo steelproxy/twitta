@@ -31,6 +31,10 @@ source .venv/bin/activate
 pip install tweepy
 pip install openai
 pip install jsonschema
+pip install flask
+pip install flask-login
+pip install werkzeug
+pip install requests
 ```
 3. Create a configuration file [OPTIONAL]:
 

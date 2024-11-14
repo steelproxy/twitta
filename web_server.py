@@ -1,4 +1,6 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, redirect, url_for, flash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 import threading
 from datetime import datetime
 import time
@@ -6,12 +8,23 @@ import x_api
 
 PORT = 5000
 
+class User(UserMixin):
+    def __init__(self, username):
+        self.id = username
+
 class TwitterBotServer:
     def __init__(self, config, x_api_client):
         self.app = Flask(__name__)
+        self.app.secret_key = "SECRET_KEY"  # dw not leaving this here
         self.config = config
         self.client = x_api_client
         self.bot_thread = None
+        
+        # Setup Flask-Login
+        self.login_manager = LoginManager()
+        self.login_manager.init_app(self.app)
+        self.login_manager.login_view = 'login'
+        
         self.setup_routes()
         
         # Bot state
@@ -22,22 +35,52 @@ class TwitterBotServer:
         self.error_count = 0
         self.status_message = ""
 
+    @property
+    def password_hash(self):
+        return generate_password_hash("PASSWORD") # dw not leaving this here
+
     def setup_routes(self):
+        @self.login_manager.user_loader
+        def load_user(username):
+            return User(username)
+
+        @self.app.route('/login', methods=['GET', 'POST'])
+        def login():
+            if current_user.is_authenticated:
+                return redirect(url_for('dashboard'))
+                
+            if request.method == 'POST':
+                password = request.form.get('password')
+                if check_password_hash(self.password_hash, password):
+                    login_user(User('admin'))
+                    return redirect(url_for('dashboard'))
+                flash('Invalid password')
+            return render_template('login.html')
+
+        @self.app.route('/logout')
+        @login_required
+        def logout():
+            logout_user()
+            return redirect(url_for('login'))
+
         @self.app.route('/')
+        @login_required
         def dashboard():
             return render_template('dashboard.html')
 
         @self.app.route('/api/start', methods=['POST'])
+        @login_required
         def start_bot():
             if self.running:
                 return jsonify({"status": "error", "message": "Bot is already running"}), 400
             
             self.bot_thread = threading.Thread(target=self._run_bot)
-            self.bot_thread.daemon = True  # Make thread daemon so it stops when main program stops
+            self.bot_thread.daemon = True
             self.bot_thread.start()
             return jsonify({"status": "success", "message": "Bot started successfully"})
 
         @self.app.route('/api/stop', methods=['POST'])
+        @login_required
         def stop_bot():
             if not self.running:
                 return jsonify({"status": "error", "message": "Bot is not running"}), 400
@@ -47,6 +90,7 @@ class TwitterBotServer:
             return jsonify({"status": "success", "message": "Bot stopped successfully"})
 
         @self.app.route('/api/status')
+        @login_required
         def get_status():
             uptime = str(datetime.now() - self.start_time) if self.start_time else "Not started"
             last_tweet_ago = str(datetime.now() - self.last_tweet) if self.last_tweet else "Never"
@@ -76,9 +120,8 @@ class TwitterBotServer:
                 self.status_message = f"Error: {str(e)}"
             time.sleep(60)  # Wait between cycles
 
-    def start(self, host='0.0.0.0'):
-        """Start the Flask server"""
-        self.app.run(host=host, port=PORT, debug=False, use_reloader=False)
+    def start(self, host='0.0.0.0', port=5000):
+        self.app.run(host=host, port=port, debug=False, use_reloader=False)
 
 def create_server(config, x_api_client):
     """Factory function to create a new server instance"""
