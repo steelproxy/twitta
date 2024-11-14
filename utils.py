@@ -5,7 +5,6 @@ import subprocess
 import os
 from packaging import version
 from log import logger
-from config_json import __version__
 
 __version__ = "0.2.5"
 APP_REPO = "https://api.github.com/repos/steelproxy/twitta/releases/latest"
@@ -84,6 +83,11 @@ def update_repo():  # Update code from GitHub
             logger.warning("Git not found in PATH. Skipping update...")
         except Exception as e:
            logger.error(f"Failed to download update! Exception occurred: {e}. Skipping update...")
+           
+def fatal_error(message):
+    logger.fatal("A fatal error has occurred and twitta must exit.")
+    logger.fatal(message)
+    sys.exit(1)
 
 def _replace_binary(temp_dir, temp_path, current_exe):
     # Create batch script to replace exe after this process exits

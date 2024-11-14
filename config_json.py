@@ -58,20 +58,39 @@ config_schema = {
 def load_config():
     if not os.path.exists(_get_config_path()): # does not work with binary version
         logger.warning("Configuration file not found. Creating a new one.")
-        return create_config()
+        return _create_config()
 
-    config = _load_config()
+    config = _load_config_json()
 
     if not _validate_config(config):
         logger.error("Configuration file is invalid. Creating a new one.")
-        return create_config()
+        return _create_config()
 
     if config['version'] != __version__:
         logger.error(f"Configuration file version does not match twitta version [current version: {__version__}, config version: {config['version']}] recommend deleting config.json and restarting twitta!")
 
     return config
 
-def create_config():
+def add_new_account(config):
+    new_account = input("Enter the Twitter account to reply to (without @): ")
+    if any(account_info['username'] == new_account for account_info in config['accounts_to_reply']):
+        logger.error(f"Unable to add user {new_account}! Account already exists in config.")
+        return
+
+    use_gpt = input("Use ChatGPT for replies? (y/n): ").strip().lower() == 'y'
+    custom_prompt = input("Enter a custom reply prompt (leave blank for default) (use {tweet_text} as a placeholder for the tweet that ChatGPT is replying to.): ")
+    
+    predefined_replies = []
+    while True:
+        reply = input("Enter a predefined reply (press enter when finished adding replies): ")
+        if not reply:
+            break
+        predefined_replies.append(reply.strip())
+    
+    _add_account(config, new_account, use_gpt, custom_prompt or None, predefined_replies)
+
+
+def _create_config():
     twitter_config = {key: input(f"Enter your Twitter {key.replace('_', ' ')}: ")
                       for key in ['bearer_token', 'consumer_key', 'consumer_secret', 'access_token', 'access_token_secret']}
 
@@ -111,7 +130,7 @@ def _get_config_path():
 
     return os.path.join(application_path, __config_file__)
 
-def _load_config():
+def _load_config_json():
     with open(_get_config_path()) as config_file:
         return json.load(config_file)
 
