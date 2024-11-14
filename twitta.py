@@ -11,6 +11,8 @@ import utils
 import x_api
 from log import logger
 from utils import __version__
+from web_server import create_server
+import threading
 
 def main():
     logger.info(f"Starting twitta {__version__}...")
@@ -25,14 +27,45 @@ def main():
     x_api.start_time = datetime.now()
     logger.info(f"Start time is: {x_api.start_time}")
     
-    auto_reply = _interactive_prompt(config)
+    _handle_interactive_mode(config, x_api_client)
 
+def _handle_interactive_mode(config, x_api_client):
     while True:
-        logger.info(f"Running in auto-reply mode: {str(auto_reply)}")
+        command = input("Enter 'add' to add an account, 'run' to run, 'run-headless' to run without user input, or 'daemon' to start web interface: ")
+        if command == 'add':
+            config_json.add_new_account(config)
+        elif command in ['run', 'run-headless']:
+            _run_normal_mode(config, x_api_client, command == 'run-headless')
+        elif command == 'daemon':
+            _run_daemon_mode(config, x_api_client)
+        else:
+            print("Invalid command.")
+
+def _run_normal_mode(config, x_api_client, auto_reply):
+    logger.info(f"Running in auto-reply mode: {str(auto_reply)}")
+    while True:
         x_api.reply_to_tweets(x_api_client, config, auto_reply)
         wait_time = random.randint(60, 300)
         logger.info(f"Waiting for {wait_time} seconds before the next tweet check.")
-        time.sleep(wait_time)  # Random wait time
+        time.sleep(wait_time)
+
+def _run_daemon_mode(config, x_api_client):
+    logger.info("Starting web interface...")
+    server = create_server(config, x_api_client)
+    
+    # Start the web server in a separate thread
+    server_thread = threading.Thread(target=server.start)
+    server_thread.daemon = True
+    server_thread.start()
+    
+    logger.info("Web interface available at http://localhost:5000")
+    
+    # Keep the main thread alive and allow for command input
+    while True:
+        command = input("Enter 'stop' to shutdown the server: ")
+        if command == 'stop':
+            logger.info("Shutting down web interface...")
+            break
 
 def _setup_environment():
     # Register the Ctrl+C handler
@@ -55,17 +88,6 @@ def _setup_api(config):
         utils.fatal_error(f"Failed to initialize Twitter API client: {e}!")
     openai.api_key = config['openai']['api_key']
     return client
-
-def _interactive_prompt(config):
-    while True:
-        command = input("Enter 'add' to add an account, 'run' to run, 'run-headless' to run without user input: ")
-        if command == 'add':
-            config_json.add_new_account(config)
-        elif command in ['run', 'run-headless']:
-            return command == 'run-headless'
-        else:
-            print("Invalid command.")
-            
 
 if __name__ == "__main__":
     main()

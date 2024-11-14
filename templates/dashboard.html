@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">Bot Control Panel</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <button id="startBot" class="btn btn-success btn-lg mb-3">
+                            <i class="fa fa-play"></i> Start Bot
+                        </button>
+                        <button id="stopBot" class="btn btn-danger btn-lg mb-3">
+                            <i class="fa fa-stop"></i> Stop Bot
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="status-indicator">
+                            Status: <span id="botStatus" class="badge bg-secondary">Unknown</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Uptime</h5>
+                                <p id="uptime" class="card-text">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Tweet Count</h5>
+                                <p id="tweetCount" class="card-text">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Last Tweet</h5>
+                                <p id="lastTweet" class="card-text">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Errors</h5>
+                                <p id="errorCount" class="card-text">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Status Message</h5>
+                                <p id="statusMessage" class="card-text">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function updateStatus() {
+        fetch('/api/status')
+            .then(response => response.json())
+            .then(data => {
+                const statusBadge = document.getElementById('botStatus');
+                statusBadge.textContent = data.running ? 'Running' : 'Stopped';
+                statusBadge.className = `badge ${data.running ? 'bg-success' : 'bg-danger'}`;
+
+                document.getElementById('uptime').textContent = data.uptime;
+                document.getElementById('tweetCount').textContent = data.tweet_count;
+                document.getElementById('lastTweet').textContent = data.last_tweet;
+                document.getElementById('errorCount').textContent = data.error_count;
+                document.getElementById('statusMessage').textContent = data.status_message;
+            });
+    }
+
+    document.getElementById('startBot').addEventListener('click', function() {
+        fetch('/api/start', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateStatus();
+                } else {
+                    alert(data.message);
+                }
+            });
+    });
+
+    document.getElementById('stopBot').addEventListener('click', function() {
+        fetch('/api/stop', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateStatus();
+                } else {
+                    alert(data.message);
+                }
+            });
+    });
+
+    // Update status every 5 seconds
+    setInterval(updateStatus, 5000);
+    updateStatus(); // Initial update
+});
+</script>
+{% endblock %} 
