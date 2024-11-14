@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger()
+logger = logging.getLogger('twitta')
 __log_file__ = 'twitta.log'
 
 # Only setup logging if no handlers exist

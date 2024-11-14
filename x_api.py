@@ -31,6 +31,7 @@ replied_tweet_ids = set()
 def reply_to_tweets(client, config, auto_reply):
     for account in config['accounts_to_reply']:
         account_username = account['username']
+        logger.info(f"Fetching tweets for @{account_username}...")
         try:
             user = client.get_user(username=account_username)
             if user.data:

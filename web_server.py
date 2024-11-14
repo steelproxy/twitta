@@ -21,8 +21,11 @@ class TwitterBotServer:
         self.app = Flask(__name__)
         
         # Configure Flask logging
-        self.logger = logging.getLogger('flask_app')  # Create a dedicated logger for the Flask app
+        self.logger = logging.getLogger('twitta_web')  # Separate logger for web
         self.logger.setLevel(logging.INFO)
+        
+        # Remove any existing handlers to prevent duplication
+        self.logger.handlers = []
         
         # Create file handler with matching format
         flask_file_handler = logging.FileHandler(__log_file__)
@@ -37,6 +40,7 @@ class TwitterBotServer:
         # Also configure werkzeug logging
         werkzeug_logger = logging.getLogger('werkzeug')
         werkzeug_logger.setLevel(logging.WARNING)
+        werkzeug_logger.handlers = []  # Clear existing handlers
         werkzeug_logger.addHandler(flask_file_handler)
         
         self.app.secret_key = config['web_interface']['secret_key']  # dw not leaving this here
@@ -141,12 +145,13 @@ class TwitterBotServer:
 
         @self.app.before_request
         def check_request_limit():
-            ip = request.remote_addr
-            
-            # Skip rate limiting for static files
-            if request.path.startswith('/static/'):
+            # Skip rate limiting for static files and status endpoints
+            if (request.path.startswith('/static/') or 
+                request.path == '/api/status' or 
+                request.path == '/api/logs'):
                 return
                 
+            ip = request.remote_addr
             if not self.check_rate_limit(ip):
                 self.logger.warning(f"Rate limit exceeded - IP: {ip} [BANNED]")
                 return "Rate limit exceeded", 429
@@ -280,15 +285,20 @@ class TwitterBotServer:
         self.running = True
         self.start_time = datetime.now()
         self.status_message = "Bot is running"
+        self.logger.info("Bot thread started")
         
         while self.running:
             try:
+                self.logger.info("Running tweet reply cycle")
                 x_api.reply_to_tweets(self.client, self.config, True)  # Run in auto mode
                 self.tweet_count = len(x_api.replied_tweet_ids)
                 self.last_tweet = datetime.now()
+                self.logger.info(f"Tweet cycle complete. Total tweets: {self.tweet_count}")
             except Exception as e:
                 self.error_count += 1
-                self.status_message = f"Error: {str(e)}"
+                error_message = f"Error in bot thread: {str(e)}"
+                self.status_message = error_message
+                self.logger.error(error_message, exc_info=True)  # This will log the full traceback
             time.sleep(60)  # Wait between cycles
 
     def start(self, host='0.0.0.0', port=5000):
