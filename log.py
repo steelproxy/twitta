@@ -1,13 +1,14 @@
 import logging
 
 logger = logging.getLogger()
+__log_file__ = 'twitta.log'
 
 # Only setup logging if no handlers exist
 if not logger.handlers:
     logger.setLevel(logging.INFO)
 
     # Create a file handler
-    file_handler = logging.FileHandler('twitta.log')
+    file_handler = logging.FileHandler(__log_file__)
     file_handler.setLevel(logging.INFO)
 
     # Create a console handler for real-time logging

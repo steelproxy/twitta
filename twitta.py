@@ -13,6 +13,7 @@ from log import logger
 from utils import __version__
 from web_server import create_server
 import threading
+import sys
 
 def main():
     logger.info(f"Starting twitta {__version__}...")
@@ -27,8 +28,11 @@ def main():
     x_api.start_time = datetime.now()
     logger.info(f"Start time is: {x_api.start_time}")
     
-    _handle_interactive_mode(config, x_api_client)
-
+    if '-d' in sys.argv:
+        _run_daemon_mode(config, x_api_client)
+    else:
+        _handle_interactive_mode(config, x_api_client)
+        
 def _handle_interactive_mode(config, x_api_client):
     while True:
         print("\nAvailable commands:")

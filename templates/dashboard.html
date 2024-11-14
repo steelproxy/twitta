@@ -69,6 +69,16 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Program Log</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="logWindow" style="height: 400px; overflow-y: auto; background: #1e1e1e; color: #ffffff; padding: 10px; font-family: monospace; font-size: 12px;">
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -121,6 +131,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update status every 5 seconds
     setInterval(updateStatus, 5000);
     updateStatus(); // Initial update
+
+    function updateLogs() {
+        fetch('/api/logs')
+            .then(response => response.json())
+            .then(data => {
+                const logWindow = document.getElementById('logWindow');
+                logWindow.innerHTML = data.logs
+                    .map(line => line.replace(/\n/g, ''))
+                    .join('<br>');
+                logWindow.scrollTop = logWindow.scrollHeight;
+            });
+    }
+
+    // Update logs every second
+    setInterval(updateLogs, 1000);
+
+    // Initial load
+    updateLogs();
 });
 </script>
 {% endblock %} 
