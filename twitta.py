@@ -31,13 +31,36 @@ def main():
 
 def _handle_interactive_mode(config, x_api_client):
     while True:
-        command = input("Enter 'add' to add an account, 'run' to run, 'run-headless' to run without user input, or 'daemon' to start web interface: ")
+        print("\nAvailable commands:")
+        print("1. add      - Add a new Twitter account to reply to")
+        print("2. run      - Run the bot with manual approval")
+        print("3. run-headless - Run the bot automatically")
+        print("4. daemon   - Start web interface")
+        print("5. adduser  - Add web interface user")
+        print("6. deluser  - Remove web interface user")
+        print("7. passwd   - Change web interface password")
+        print("8. newkey   - Regenerate web interface secret key")
+        print("9. exit     - Exit the program")
+        
+        command = input("\nEnter command: ").strip().lower()
+        
         if command == 'add':
             config_json.add_new_account(config)
         elif command in ['run', 'run-headless']:
             _run_normal_mode(config, x_api_client, command == 'run-headless')
         elif command == 'daemon':
             _run_daemon_mode(config, x_api_client)
+        elif command == 'adduser':
+            config_json.add_web_user(config)
+        elif command == 'deluser':
+            config_json.remove_web_user(config)
+        elif command == 'passwd':
+            config_json.change_web_password(config)
+        elif command == 'newkey':
+            config_json.regenerate_secret_key(config)
+        elif command == 'exit':
+            logger.info("Exiting program...")
+            break
         else:
             print("Invalid command.")
 

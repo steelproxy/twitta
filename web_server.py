@@ -11,11 +11,12 @@ PORT = 5000
 class User(UserMixin):
     def __init__(self, username):
         self.id = username
+        self.username = username
 
 class TwitterBotServer:
     def __init__(self, config, x_api_client):
         self.app = Flask(__name__)
-        self.app.secret_key = "SECRET_KEY"  # dw not leaving this here
+        self.app.secret_key = config['web_interface']['secret_key']  # dw not leaving this here
         self.config = config
         self.client = x_api_client
         self.bot_thread = None
@@ -24,6 +25,7 @@ class TwitterBotServer:
         self.login_manager = LoginManager()
         self.login_manager.init_app(self.app)
         self.login_manager.login_view = 'login'
+        self.login_manager.login_message = 'Please log in to access the dashboard.'
         
         self.setup_routes()
         
@@ -35,14 +37,18 @@ class TwitterBotServer:
         self.error_count = 0
         self.status_message = ""
 
-    @property
-    def password_hash(self):
-        return generate_password_hash("PASSWORD") # dw not leaving this here
+    def verify_credentials(self, username, password):
+        stored_credentials = self.config['web_interface']['credentials']
+        if username in stored_credentials:
+            return check_password_hash(stored_credentials[username], password)
+        return False
 
     def setup_routes(self):
         @self.login_manager.user_loader
         def load_user(username):
-            return User(username)
+            if username in self.config['web_interface']['credentials']:
+                return User(username)
+            return None
 
         @self.app.route('/login', methods=['GET', 'POST'])
         def login():
@@ -50,11 +56,14 @@ class TwitterBotServer:
                 return redirect(url_for('dashboard'))
                 
             if request.method == 'POST':
+                username = request.form.get('username')
                 password = request.form.get('password')
-                if check_password_hash(self.password_hash, password):
-                    login_user(User('admin'))
-                    return redirect(url_for('dashboard'))
-                flash('Invalid password')
+                
+                if self.verify_credentials(username, password):
+                    login_user(User(username))
+                    next_page = request.args.get('next')
+                    return redirect(next_page or url_for('dashboard'))
+                flash('Invalid username or password')
             return render_template('login.html')
 
         @self.app.route('/logout')
