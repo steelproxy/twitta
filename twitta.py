@@ -9,14 +9,12 @@ import signal
 from log import logger
 import config_json
 import utils
+from utils import __version__
 
 # Rate limits
 APP_RATE_LIMIT = 300  # app limit: 300 requests per 15 min
 USER_RATE_LIMIT = 900  # user limit: 900 requests per 15 min
 USER_REPLY_LIMIT = 200  # user reply limit: 200 requests per 15 min
-
-__version__ = "0.2.5"
-__default_prompt__ = "Make sure not to include commentary or anything extra in your response, just raw text. Reply to this tweet: {tweet_text}"
 
 # Track request counts and timestamps
 request_timestamps = []
@@ -166,6 +164,7 @@ def main():
     # Register the Ctrl+C handler
     signal.signal(signal.SIGINT, utils._handle_exit)
     
+    # Start and update
     logger.info(f"Starting twitta {__version__}...")
     logger.info("Checking for updates...")
     utils.update_repo()

@@ -4,8 +4,8 @@ import sys
 import jsonschema
 from jsonschema import validate
 from log import logger
+from utils import __version__
 
-__version__ = "0.2.5"
 __default_prompt__ = "Make sure not to include commentary or anything extra in your response, just raw text. Reply to this tweet: {tweet_text}"
 __config_file__ = "config.json"
 
