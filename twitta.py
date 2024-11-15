@@ -36,15 +36,15 @@ def main():
 def _handle_interactive_mode(config, x_api_client):
     while True:
         print("\nAvailable commands:")
-        print("1. add      - Add a new Twitter account to reply to")
-        print("2. run      - Run the bot with manual approval")
+        print("1. add          - Add a new Twitter account to reply to")
+        print("2. run          - Run the bot with manual approval") 
         print("3. run-headless - Run the bot automatically")
-        print("4. daemon   - Start web interface")
-        print("5. adduser  - Add web interface user")
-        print("6. deluser  - Remove web interface user")
-        print("7. passwd   - Change web interface password")
-        print("8. newkey   - Regenerate web interface secret key")
-        print("9. exit     - Exit the program")
+        print("4. daemon       - Start web interface")
+        print("5. adduser      - Add web interface user")
+        print("6. deluser      - Remove web interface user")
+        print("7. passwd       - Change web interface password")
+        print("8. newkey       - Regenerate web interface secret key")
+        print("9. exit         - Exit the program")
         
         command = input("\nEnter command: ").strip().lower()
         
@@ -77,22 +77,41 @@ def _run_normal_mode(config, x_api_client, auto_reply):
         time.sleep(wait_time)
 
 def _run_daemon_mode(config, x_api_client):
-    logger.info("Starting web interface...")
-    server = create_server(config, x_api_client)
-    
-    # Start the web server in a separate thread
-    server_thread = threading.Thread(target=server.start)
-    server_thread.daemon = True
-    server_thread.start()
-    
-    logger.info("Web interface available at http://localhost:5000")
-    
-    # Keep the main thread alive and allow for command input
-    while True:
-        command = input("Enter 'stop' to shutdown the server: ")
-        if command == 'stop':
-            logger.info("Shutting down web interface...")
-            break
+    try:
+        logger.info("Starting web interface...")
+        try:
+            server = create_server(config, x_api_client)
+        except Exception as e:
+            logger.error(f"Failed to create web server: {str(e)}! Shutting down web interface...")
+            return
+            
+        # Start the web server in a separate thread
+        server_thread = threading.Thread(target=server.start)
+        server_thread.daemon = True
+        
+        try:
+            server_thread.start()
+        except RuntimeError as e:
+            logger.error(f"Failed to start server thread: {str(e)}! Shutting down web interface...")
+            return
+            
+        port = config['web_interface']['port']
+        logger.info(f"Web interface available at http://localhost:{port}")
+        
+        # Keep the main thread alive and allow for command input
+        while True:
+            try:
+                command = input("Enter 'stop' to shutdown the server: ")
+                if command == 'stop':
+                    logger.info("Shutting down web interface...")
+                    break
+            except (KeyboardInterrupt, EOFError):
+                logger.info("Received shutdown signal... Shutting down web interface...")
+                break
+                
+    except Exception as e:
+        logger.error(f"Unexpected error in daemon mode: {str(e)}! Shutting down web interface...")
+        return
 
 def _setup_environment():
     # Register the Ctrl+C handler

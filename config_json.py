@@ -59,9 +59,11 @@ config_schema = {
                     "type": "object",
                     "additionalProperties": {"type": "string"}  # username: password_hash pairs
                 },
-                "secret_key": {"type": "string"}
+                "secret_key": {"type": "string"},
+                "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+                "log_level": {"type": "string", "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]}
             },
-            "required": ["credentials", "secret_key"]
+            "required": ["credentials", "secret_key", "port", "log_level"]
         }
     },
     "required": ["version", "twitter", "openai", "accounts_to_reply", "web_interface"],
@@ -95,9 +97,25 @@ def setup_web_interface(config):
             if input("Add another user? (y/n): ").lower() != 'y':
                 break
         
+        while True:
+            port = input("Enter port number (default: 5000): ").strip()
+            if not port:
+                port = 5000
+                break
+            if port.isdigit() and 1 <= int(port) <= 65535:
+                port = int(port)
+                break
+            logger.warning("Please enter a valid port number between 1 and 65535")
+        
+        log_level = input("Enter log level (DEBUG/INFO/WARNING/ERROR/CRITICAL) (default: INFO): ").strip().upper()
+        if log_level not in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+            log_level = "WARNING"
+        
         config['web_interface'] = {
             'credentials': credentials,
-            'secret_key': secrets.token_hex(32)
+            'secret_key': secrets.token_hex(32),
+            'port': port,
+            'log_level': log_level
         }
         _save_config(config)
         logger.info("Web interface configuration saved successfully.")

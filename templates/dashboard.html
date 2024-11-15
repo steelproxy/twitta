@@ -70,12 +70,27 @@
                     </div>
                 </div>
 
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Program Log</h5>
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Server Log (twitta_server.log)</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="serverLogWindow" style="height: 400px; overflow-y: auto; background: #1e1e1e; color: #ffffff; padding: 10px; font-family: monospace; font-size: 12px;">
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div id="logWindow" style="height: 400px; overflow-y: auto; background: #1e1e1e; color: #ffffff; padding: 10px; font-family: monospace; font-size: 12px;">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Bot Log (twitta.log)</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="botLogWindow" style="height: 400px; overflow-y: auto; background: #1e1e1e; color: #ffffff; padding: 10px; font-family: monospace; font-size: 12px;">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -133,10 +148,22 @@ document.addEventListener('DOMContentLoaded', function() {
     updateStatus(); // Initial update
 
     function updateLogs() {
+        // Update server logs
         fetch('/api/logs')
             .then(response => response.json())
             .then(data => {
-                const logWindow = document.getElementById('logWindow');
+                const logWindow = document.getElementById('serverLogWindow');
+                logWindow.innerHTML = data.logs
+                    .map(line => line.replace(/\n/g, ''))
+                    .join('<br>');
+                logWindow.scrollTop = logWindow.scrollHeight;
+            });
+
+        // Update bot logs
+        fetch('/api/bot_logs')
+            .then(response => response.json())
+            .then(data => {
+                const logWindow = document.getElementById('botLogWindow');
                 logWindow.innerHTML = data.logs
                     .map(line => line.replace(/\n/g, ''))
                     .join('<br>');
