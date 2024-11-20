@@ -119,7 +119,6 @@ def setup_web_interface(config):
             'log_level': log_level
         }
         _save_config(config)
-        logger.info("Web interface configuration saved successfully.")
         return True
     return False
 
@@ -239,9 +238,8 @@ def _create_config():
     }
 
     # Set up web interface during initial configuration
-    setup_web_interface(config)
+    setup_web_interface(config) # saves config anyways no need to call _save_config
 
-    _save_config(config)
     logger.info("New configuration file created.")
     return config
 
