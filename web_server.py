@@ -97,6 +97,7 @@ class TwitterBotServer:
         self.running = True
         self.start_time = datetime.now()
         self.status_message = "Bot is running"
+        self.error_count = 0
         self.api_logger.info("Bot thread started")
         
         def update_status(message):
