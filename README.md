@@ -50,29 +50,6 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
-3. Create a configuration file [OPTIONAL]:
-```json
-{
-    "twitter": {
-        "bearer_token": "YOUR_TWITTER_BEARER_TOKEN",
-        "consumer_key": "YOUR_TWITTER_CONSUMER_KEY",
-        "consumer_secret": "YOUR_TWITTER_CONSUMER_SECRET",
-        "access_token": "YOUR_TWITTER_ACCESS_TOKEN",
-        "access_token_secret": "YOUR_TWITTER_ACCESS_TOKEN_SECRET"
-    },
-    "openai": {
-        "api_key": "YOUR_OPENAI_API_KEY"
-    },
-    "web_interface": {
-        "secret_key": "GENERATED_SECRET_KEY",
-        "port": 5000,
-        "log_level": "INFO",
-        "credentials": {}
-    },
-    "accounts_to_reply": []
-}
-```
-
 ## Usage
 
 ### Command Line Interface
