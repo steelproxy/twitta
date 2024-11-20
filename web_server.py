@@ -10,7 +10,6 @@ import logging
 import json
 from log import web_logger, api_logger
 from collections import deque
-from flask_wtf.csrf import CSRFProtect
 import re
 from bleach import clean
 
@@ -52,7 +51,6 @@ class TwitterBotServer:
         self.app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
         self.app.config['REMEMBER_COOKIE_SECURE'] = True
         self.app.config['REMEMBER_COOKIE_HTTPONLY'] = True
-        CSRFProtect(self.app)
         self.config = config
         self.client = x_api_client
         self.bot_thread = None
