@@ -6,40 +6,47 @@ Twitta is a Python script that automates replying to tweets using the OpenAI API
 
 - **Automated Replies**: Automatically replies to tweets from specified accounts.
 - **Custom Prompts**: Allows customization of reply prompts for each account.
-- **Logging**: Detailed logging of actions and errors, saved to a log file (`twitta.log`).
-- **Configuration Management**: Loads Twitter and OpenAI API credentials from a JSON configuration file.
-- **Rate Limiting**: Implements random wait times to avoid exceeding Twitter’s API limits.
+- **Web Interface**: Control and monitor the bot through a web dashboard.
+- **User Authentication**: Secure web interface with user authentication.
+- **Rate Limiting**: Implements smart rate limiting to comply with Twitter's API limits.
+- **Detailed Logging**: Comprehensive logging system with separate logs for web, API, and application events.
+- **Auto Updates**: Built-in update checker and installer.
+- **Multiple Operation Modes**:
+  - Interactive mode with manual approval.
+  - Headless mode for automated operation.
+  - Daemon mode with web interface.
 
 ## Requirements
 
 - Python 3.7+
-- `tweepy` library
-- `openai` library
-- `jsonschema` library
+- Required Python packages (installed automatically):
+  - Flask and Flask-Login for web interface.
+  - Tweepy for Twitter API integration.
+  - OpenAI for GPT integration.
+  - Additional dependencies in requirements.txt.
 
 ## Setup
-This section is for people who would not like to use the pyinstaller compiled binary.
+
 1. Clone the repository:
 ```bash
 git clone https://github.com/steelproxy/twitta.git
 cd twitta
 ```
-2: Make a virtual environment and install required dependencies
+
+2. Run the setup script:
+
+For Windows:
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install tweepy
-pip install openai
-pip install jsonschema
-pip install flask
-pip install flask-login
-pip install werkzeug
-pip install requests
+setup.bat
 ```
+
+For macOS/Linux:
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
 3. Create a configuration file [OPTIONAL]:
-
-- If you don’t have a config.json file, the script will prompt you to create one on the first run. Alternatively, create it manually in the following format:
-
 ```json
 {
     "twitter": {
@@ -52,55 +59,48 @@ pip install requests
     "openai": {
         "api_key": "YOUR_OPENAI_API_KEY"
     },
+    "web_interface": {
+        "secret_key": "GENERATED_SECRET_KEY",
+        "port": 5000,
+        "log_level": "INFO",
+        "credentials": {}
+    },
     "accounts_to_reply": []
 }
 ```
-3. Run the script:
-- Execute the script using Python:
 
-```bash
-chmod +x ./twitta.py
-python twitta.py
-```
-
-4. Interactively add accounts:
-
-- Once the script is running, you can add Twitter accounts to reply to and start the bot by following the on-screen prompts.
-
-## Using the Binary
-For those who prefer not to run the script manually, you can download the latest binary from the Releases page.
-
-## Steps to Use the Binary:
-1. Download the latest release: Choose the appropriate binary for your operating system from the Releases page.
-
-2. Extract the files: If the binary is in a compressed format, extract it to your desired location.
-
-3. Configure the JSON file: Ensure you have a config.json file set up as described in the "Setup" section.
-
-4. Run the binary: Execute the binary directly.
-- On macOS enter your shell of choice and run:
-```bash
-cd <directory of downloaded executable>
-chmod +x ./twitta
-./twitta
-```
-You may have to allow in security and privacy settings.
-
-- On Windows simply double click the executable
-  
 ## Usage
-- Enter 'add' to add a Twitter account to the reply list.
-- Enter 'run' to start the bot, which will begin monitoring the specified accounts for tweets.
-- Enter 'run-headless' to start the bot, which will begin monitoring the specified accounts for tweets and reply automatically.
-  
+
+### Command Line Interface
+- `add` - Add a Twitter account to reply to
+- `run` - Run the bot with manual approval
+- `run-headless` - Run the bot automatically
+- `daemon` - Start web interface
+- `adduser` - Add web interface user
+- `deluser` - Remove web interface user
+- `passwd` - Change web interface password
+- `newkey` - Regenerate web interface secret key
+- `exit` - Exit the program
+
+### Web Interface
+Access the web interface at `http://localhost:5000` (default port) to:
+- Monitor bot status
+- View live logs
+- Start/stop the bot
+- Manage Twitter accounts
+- View statistics
+
 ## Logging
-All logs will be written to twitta.log in the same directory. You can check this file for detailed information about the bot's activities and any errors that occur.
+Logs are stored in the `logs` directory:
+- `twitta.log` - Main application logs
+- `web.log` - Web interface logs
+- `api.log` - Twitter API interaction logs
 
 ## License
-This project is licensed under the MIT License. See the LICENSE file for more information.
+This project is licensed under the MIT License. See the LICENSE file for details.
 
 ## Contributing
-Contributions are welcome! If you have suggestions for improvements or find a bug, please create an issue or submit a pull request.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-# Contact
-For questions or feedback, feel free to reach out at steelproxy@protonmail.com
+## Contact
+For questions or feedback, reach out at steelproxy@protonmail.com

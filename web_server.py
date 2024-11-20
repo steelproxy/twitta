@@ -34,26 +34,11 @@ class TwitterBotServer:
         self.logger.setLevel(logging.getLevelName(config['web_interface']['log_level']))
         self.api_logger.setLevel(logging.getLevelName(config['web_interface']['log_level']))
         
-        # Close and remove existing handlers
-        for handler in self.logger.handlers[:]:
-            handler.close()  # Explicitly close the handler
-            self.logger.removeHandler(handler)
-        
-        for handler in self.api_logger.handlers[:]:
-            handler.close()  # Explicitly close the handler
-            self.api_logger.removeHandler(handler)
-        
-        # Add new handlers
-        web_handler = logging.FileHandler('logs/web.log')
-        api_handler = logging.FileHandler('logs/api.log')
-        
-        self.logger.addHandler(web_handler)
-        self.api_logger.addHandler(api_handler)
-        
         # Configure werkzeug logging
         werkzeug_logger = logging.getLogger('werkzeug')
         werkzeug_logger.setLevel(logging.WARNING)
-        werkzeug_logger.addHandler(web_handler)
+        werkzeug_logger.handlers = []  # Clear existing handlers
+        werkzeug_logger.addHandler(self.logger.handlers[0])  # Use same handler as web logger
 
     def _init_server(self, config, x_api_client):
         """Initialize server variables"""
