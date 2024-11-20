@@ -401,43 +401,48 @@ class TwitterBotServer:
         })
 
     def _handle_update_account(self):
-        """Update or add account configuration with validation"""
-        data = request.json
-        username = data.get('username', '').strip('@')
-        if not username:
-            return jsonify({"status": "error", "message": "Username is required"}), 400
+        """Update or add account configuration"""
+        try:
+            data = request.json
+            if not data or 'username' not in data:
+                return jsonify({"status": "error", "message": "Invalid request data"}), 400
 
-        # Sanitize other inputs
-        custom_prompt = self._sanitize_text(data.get('custom_prompt', ''))
-        predefined_replies = [
-            self._sanitize_text(reply) 
-            for reply in data.get('predefined_replies', [])
-            if reply
-        ]
+            username = data['username'].strip('@')
+            if not username:
+                return jsonify({"status": "error", "message": "Username is required"}), 400
 
-        # Create new account object matching config structure
-        new_account = {
-            "username": username,
-            "use_gpt": data.get('use_gpt', True),
-            "custom_prompt": data.get('custom_prompt', ""),
-            "predefined_replies": data.get('predefined_replies', [])
-        }
+            # Create new account object
+            new_account = {
+                "username": username,
+                "use_gpt": data.get('use_gpt', True),
+                "custom_prompt": data.get('custom_prompt', ""),
+                "predefined_replies": data.get('predefined_replies', [])
+            }
 
-        # Find and update existing account or add new one
-        accounts = self.config['accounts_to_reply']
-        for i, account in enumerate(accounts):
-            if account['username'] == username:
-                accounts[i] = new_account
-                break
-        else:
-            accounts.append(new_account)
+            # Find and update existing account or add new one
+            accounts = self.config['accounts_to_reply']
+            for i, account in enumerate(accounts):
+                if account['username'] == username:
+                    accounts[i] = new_account
+                    break
+            else:
+                accounts.append(new_account)
 
-        self._save_config()
-        return jsonify({
-            "status": "success", 
-            "message": "Account updated successfully",
-            "restart_required": self.running
-        })
+            # Save configuration
+            with open(self.config_file_path, 'w') as f:
+                json.dump(self.config, f, indent=4)
+
+            return jsonify({
+                "status": "success",
+                "message": "Account updated successfully",
+                "restart_required": self.running
+            })
+        except Exception as e:
+            self.logger.error(f"Error updating account: {str(e)}")
+            return jsonify({
+                "status": "error",
+                "message": f"Error updating account: {str(e)}"
+            }), 500
 
     def _handle_delete_account(self):
         """Delete account from configuration"""
