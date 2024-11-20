@@ -6,7 +6,7 @@ import os
 from packaging import version
 from log import app_logger as logger
 
-__version__ = "0.2.5"
+__version__ = "0.3"
 APP_REPO = "https://api.github.com/repos/steelproxy/twitta/releases/latest"
 
 def update_repo():  # Update code from GitHub

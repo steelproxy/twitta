@@ -128,7 +128,7 @@ def add_web_user(config):
         setup_web_interface(config)
         return
         
-    username = input("Enter new username: ").strip()
+    username = input("Enter new web interface username: ").strip()
     if not username:
         logger.warning("Username cannot be empty!")
         return False
