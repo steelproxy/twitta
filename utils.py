@@ -78,6 +78,18 @@ def update_repo():  # Update code from GitHub
             subprocess.run(["git", "--version"], 
                         check=True, capture_output=True)  # Verify git installation
             subprocess.run(["git", "pull"], check=True)     # Pull latest changes
+            
+            # Add dependency update
+            requirements_file = os.path.join(os.path.dirname(__file__), 'requirements.txt')
+            if os.path.exists(requirements_file):
+                logger.info("Installing updated dependencies...")
+                try:
+                    subprocess.run([sys.executable, "-m", "pip", "install", "-r", requirements_file], 
+                                check=True, capture_output=True)
+                    logger.info("Dependencies updated successfully.")
+                except subprocess.CalledProcessError as e:
+                    logger.error(f"Failed to update dependencies: {e}")
+            
             logger.info("Repository updated successfully.")
         except (subprocess.CalledProcessError, FileNotFoundError):
             logger.warning("Git not found in PATH. Skipping update...")

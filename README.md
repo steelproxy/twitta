@@ -15,6 +15,10 @@ Twitta is a Python script that automates replying to tweets using the OpenAI API
   - Interactive mode with manual approval.
   - Headless mode for automated operation.
   - Daemon mode with web interface.
+- **Smart Auto Updates**:
+  - Automatically checks for and installs updates
+  - Detects and installs new dependencies
+  - Seamless version transitions
 
 ## Requirements
 
