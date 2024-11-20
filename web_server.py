@@ -22,7 +22,6 @@ class TwitterBotServer:
         self._setup_logging(config)
         self._init_server(config, x_api_client)
         self._setup_auth()
-        self._setup_rate_limits()
         self.setup_routes()
 
     def _setup_logging(self, config):
@@ -64,80 +63,12 @@ class TwitterBotServer:
         self.login_manager.login_view = 'login'
         self.login_manager.login_message = 'Please log in to access the dashboard.'
 
-    def _setup_rate_limits(self):
-        """Initialize rate limiting"""
-        self.ip_attempts = {}
-        self.ip_requests = {}
-        self.MAX_ATTEMPTS = 5
-        self.MAX_REQUESTS = 60
-        self.ATTEMPT_WINDOW = 300
-        self.REQUEST_WINDOW = 60
-
     def _verify_credentials(self, username, password):
         """Verify user credentials"""
         stored_credentials = self.config['web_interface']['credentials']
         if username in stored_credentials:
             return check_password_hash(stored_credentials[username], password)
         return False
-
-    def _check_rate_limit(self, ip):
-        """Check if IP is making too many requests"""
-        current_time = time.time()
-        self._clean_rate_limits(current_time)
-        
-        if ip not in self.ip_requests:
-            self.ip_requests[ip] = (1, current_time)
-            return True
-            
-        count, timestamp = self.ip_requests[ip]
-        if current_time - timestamp >= self.REQUEST_WINDOW:
-            self.ip_requests[ip] = (1, current_time)
-            return True
-            
-        if count >= self.MAX_REQUESTS:
-            self.logger.warning(f"Rate limit exceeded - IP: {ip} [BANNED]")
-            return False
-            
-        self.ip_requests[ip] = (count + 1, timestamp)
-        return True
-
-    def _clean_rate_limits(self, current_time):
-        """Clean expired rate limit entries"""
-        self.ip_requests = {
-            ip_addr: (count, timestamp) 
-            for ip_addr, (count, timestamp) in self.ip_requests.items()
-            if current_time - timestamp < self.REQUEST_WINDOW
-        }
-
-    def _check_auth_attempts(self, ip):
-        """Check if IP has too many failed login attempts"""
-        current_time = time.time()
-        self._clean_auth_attempts(current_time)
-        
-        if ip not in self.ip_attempts:
-            self.ip_attempts[ip] = (0, current_time)
-            return True
-            
-        attempts, _ = self.ip_attempts[ip]
-        if attempts >= self.MAX_ATTEMPTS:
-            self.logger.warning(f"Authentication failed - Too many attempts from {ip} [BANNED]")
-            return False
-            
-        return True
-
-    def _clean_auth_attempts(self, current_time):
-        """Clean expired authentication attempt entries"""
-        self.ip_attempts = {
-            ip_addr: (attempts, timestamp) 
-            for ip_addr, (attempts, timestamp) in self.ip_attempts.items()
-            if current_time - timestamp < self.ATTEMPT_WINDOW
-        }
-
-    def _record_failed_attempt(self, ip):
-        """Record a failed login attempt"""
-        current_time = time.time()
-        attempts, _ = self.ip_attempts.get(ip, (0, current_time))
-        self.ip_attempts[ip] = (attempts + 1, current_time)
 
     def _get_log_entries(self, log_file, max_lines=100):
         """Get recent log entries from specified file"""
@@ -208,15 +139,6 @@ class TwitterBotServer:
                 return User(username)
             return None
 
-        @self.app.before_request
-        def check_request_limit():
-            # Only check rate limits for login attempts
-            if request.endpoint == 'login' and request.method == 'POST':
-                ip = request.remote_addr
-                if not self._check_rate_limit(ip):
-                    self.logger.warning(f"Rate limit exceeded - IP: {ip} [BANNED]")
-                    return "Rate limit exceeded", 429
-
         @self.app.route('/login', methods=['GET', 'POST'])
         def login():
             return self._handle_login()
@@ -236,22 +158,46 @@ class TwitterBotServer:
             return redirect(url_for('dashboard'))
             
         if request.method == 'POST':
-            if not self._check_auth_attempts(ip):
-                self.logger.warning(f"Authentication failed - IP blocked: {ip} ({host}) [BANNED]")
-                return "Too many failed attempts", 429
+            # Initialize auth attempts tracking if needed
+            if not hasattr(self, 'auth_attempts'):
+                self.auth_attempts = {}
                 
+            current_time = time.time()
+            
+            # Clean up old attempts
+            self.auth_attempts = {
+                ip_addr: (count, timestamp) 
+                for ip_addr, (count, timestamp) in self.auth_attempts.items()
+                if current_time - timestamp < 900  # 15 minutes
+            }
+            
+            # Check for too many attempts
+            if ip in self.auth_attempts:
+                attempts, timestamp = self.auth_attempts[ip]
+                if attempts >= 5:  # Max 5 attempts per 15 minutes
+                    self.logger.warning(f"Authentication failed - Too many attempts from {ip} ({host}) [BANNED]")
+                    return "Too many login attempts", 429
+                    
             username = request.form.get('username')
             password = request.form.get('password')
             
             if self._verify_credentials(username, password):
+                # Reset attempts on successful login
+                if ip in self.auth_attempts:
+                    del self.auth_attempts[ip]
                 login_user(User(username))
                 self.logger.info(f"Authentication successful - User: {username} from {ip} ({host})")
                 next_page = request.args.get('next')
                 return redirect(next_page or url_for('dashboard'))
                 
-            self._record_failed_attempt(ip)
+            # Record failed attempt
+            self.auth_attempts[ip] = (
+                self.auth_attempts.get(ip, (0, current_time))[0] + 1,
+                current_time
+            )
             self.logger.warning(f"Authentication failed - Invalid credentials from {ip} ({host}) for user: {username}")
             flash('Invalid username or password')
+            
         return render_template('login.html')
 
     def _handle_logout(self):
@@ -423,9 +369,11 @@ class TwitterBotServer:
             accounts = self.config['accounts_to_reply']
             for i, account in enumerate(accounts):
                 if account['username'] == username:
+                    self.logger.info(f"Updating existing account @{username} - GPT: {new_account['use_gpt']}")
                     accounts[i] = new_account
                     break
             else:
+                self.logger.info(f"Adding new account @{username} - GPT: {new_account['use_gpt']}")
                 accounts.append(new_account)
 
             # Save configuration
@@ -438,7 +386,7 @@ class TwitterBotServer:
                 "restart_required": self.running
             })
         except Exception as e:
-            self.logger.error(f"Error updating account: {str(e)}")
+            self.logger.error(f"Error updating account @{username}: {str(e)}")
             return jsonify({
                 "status": "error",
                 "message": f"Error updating account: {str(e)}"
