@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4 class="card-title">Manage Accounts</h4>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning" id="restartAlert" style="display: none;">
+            Changes have been made. Please restart the bot for changes to take effect.
+        </div>
+        
+        <div class="mb-3">
+            <button type="button" class="btn btn-primary" onclick="accountManager.showAddModal()">
+                <i class="fa fa-plus"></i> Add Account
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Use GPT</th>
+                        <th>Custom Prompt</th>
+                        <th>Predefined Replies</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="accountsTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% include 'components/account_modal.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/accounts.js') }}"></script>
+{% endblock %} 

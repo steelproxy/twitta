@@ -7,6 +7,7 @@ import time
 import x_api
 import os
 import logging
+import json
 
 __log_file__ = 'twitta_server.log'
 
@@ -17,7 +18,7 @@ class User(UserMixin):
 
 class TwitterBotServer:
     def __init__(self, config, x_api_client):
-        self.app = Flask(__name__)
+        self.app = Flask(__name__, static_folder='static')
         self._setup_logging(config)
         self._init_server(config, x_api_client)
         self._setup_auth()
@@ -51,6 +52,7 @@ class TwitterBotServer:
         self.bot_thread = None
         self.log_file = __log_file__
         self.server_start_time = x_api.start_time
+        self.config_file_path = os.getenv('CONFIG_PATH', 'config.json')
         
         # Bot state
         self.running = False
@@ -301,6 +303,21 @@ class TwitterBotServer:
         def get_bot_logs():
             return self._handle_get_logs('twitta.log')
 
+        @self.app.route('/accounts', methods=['GET'])
+        @login_required
+        def manage_accounts():
+            return self._handle_manage_accounts()
+
+        @self.app.route('/api/accounts', methods=['GET', 'POST', 'DELETE'])
+        @login_required
+        def handle_accounts():
+            if request.method == 'GET':
+                return self._handle_get_accounts()
+            elif request.method == 'POST':
+                return self._handle_update_account()
+            elif request.method == 'DELETE':
+                return self._handle_delete_account()
+
     def _handle_dashboard(self):
         """Handle dashboard request"""
         ip = request.remote_addr
@@ -355,6 +372,81 @@ class TwitterBotServer:
         """Handle log request"""
         logs = self._get_log_entries(log_file)
         return jsonify({"logs": logs})
+
+    def _handle_manage_accounts(self):
+        """Handle accounts page request"""
+        ip = request.remote_addr
+        host = request.host
+        self.logger.info(f"Accounts page accessed by user: {current_user.username} from {ip} ({host})")
+        return render_template('accounts.html')
+
+    def _handle_get_accounts(self):
+        """Return list of accounts to reply to"""
+        return jsonify({
+            "accounts": self.config['accounts_to_reply'],
+            "running": self.running
+        })
+
+    def _handle_update_account(self):
+        """Update or add account configuration"""
+        data = request.json
+        username = data.get('username', '').strip('@')
+        if not username:
+            return jsonify({"status": "error", "message": "Username is required"}), 400
+
+        # Create new account object matching config structure
+        new_account = {
+            "username": username,
+            "use_gpt": data.get('use_gpt', True),
+            "custom_prompt": data.get('custom_prompt', ""),
+            "predefined_replies": data.get('predefined_replies', [])
+        }
+
+        # Find and update existing account or add new one
+        accounts = self.config['accounts_to_reply']
+        for i, account in enumerate(accounts):
+            if account['username'] == username:
+                accounts[i] = new_account
+                break
+        else:
+            accounts.append(new_account)
+
+        self._save_config()
+        return jsonify({
+            "status": "success", 
+            "message": "Account updated successfully",
+            "restart_required": self.running
+        })
+
+    def _handle_delete_account(self):
+        """Delete account from configuration"""
+        username = request.json.get('username', '').strip('@')
+        if not username:
+            return jsonify({"status": "error", "message": "Username is required"}), 400
+
+        accounts = self.config['accounts_to_reply']
+        initial_length = len(accounts)
+        self.config['accounts_to_reply'] = [acc for acc in accounts if acc['username'] != username]
+        
+        if len(self.config['accounts_to_reply']) == initial_length:
+            return jsonify({"status": "error", "message": "Account not found"}), 404
+
+        self._save_config()
+        return jsonify({
+            "status": "success", 
+            "message": "Account deleted successfully",
+            "restart_required": self.running
+        })
+
+    def _save_config(self):
+        """Save current configuration to file"""
+        try:
+            with open(self.config_file_path, 'w') as f:
+                json.dump(self.config, f, indent=4)
+            self.logger.info("Configuration saved successfully")
+        except Exception as e:
+            self.logger.error(f"Error saving configuration: {str(e)}")
+            raise
 
     def start(self, host='0.0.0.0'):
         """Start the Flask server"""
