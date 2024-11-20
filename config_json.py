@@ -98,14 +98,15 @@ def setup_web_interface(config):
                 break
         
         while True:
-            port = input("Enter port number (default: 5000): ").strip()
+            port = input("Enter port number (default: 5001): ").strip()
             if not port:
-                port = 5000
+                port = 5001
                 break
             if port.isdigit() and 1 <= int(port) <= 65535:
                 port = int(port)
                 break
             logger.warning("Please enter a valid port number between 1 and 65535")
+        print(f"Hint: you can access this page by going to http://127.0.0.1:{port}/ in your web browser.")
         
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         log_level = input(f"Enter log level ({'/'.join(valid_levels)}) (default: INFO): ").strip().upper()
