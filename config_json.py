@@ -76,7 +76,7 @@ def setup_web_interface(config):
         
         credentials = {}
         while True:
-            username = input("Enter username (or press enter to finish adding users): ").strip()
+            username = input("Enter a new web interface username (or press enter to finish adding users): ").strip()
             if not username:
                 if not credentials:
                     logger.warning("At least one user is required!")
