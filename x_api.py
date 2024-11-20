@@ -6,7 +6,7 @@ import tweepy
 import tweepy.errors
 from datetime import timedelta
 from datetime import datetime
-from log import logger
+from log import api_logger as logger
 
 # Wait times
 REPLY_WAIT_START = 60

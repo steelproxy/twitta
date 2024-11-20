@@ -5,7 +5,7 @@ import secrets
 import jsonschema
 from jsonschema import validate
 from werkzeug.security import generate_password_hash
-from log import logger
+from log import app_logger as logger
 from utils import __version__
 
 __default_prompt__ = "Make sure not to include commentary or anything extra in your response, just raw text. Reply to this tweet: {tweet_text}"
@@ -107,9 +107,10 @@ def setup_web_interface(config):
                 break
             logger.warning("Please enter a valid port number between 1 and 65535")
         
-        log_level = input("Enter log level (DEBUG/INFO/WARNING/ERROR/CRITICAL) (default: INFO): ").strip().upper()
-        if log_level not in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
-            log_level = "WARNING"
+        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        log_level = input(f"Enter log level ({'/'.join(valid_levels)}) (default: INFO): ").strip().upper()
+        if log_level not in valid_levels:
+            log_level = "INFO"
         
         config['web_interface'] = {
             'credentials': credentials,

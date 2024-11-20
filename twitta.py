@@ -9,7 +9,7 @@ import tweepy
 import tweepy.errors
 import utils
 import x_api
-from log import logger
+from log import app_logger as logger
 from utils import __version__
 from web_server import create_server
 import threading

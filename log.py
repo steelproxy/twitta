@@ -1,25 +1,30 @@
 import logging
+import os
+from datetime import datetime
 
-logger = logging.getLogger('twitta')
-__log_file__ = 'twitta.log'
+# Create logs directory if it doesn't exist
+if not os.path.exists('logs'):
+    os.makedirs('logs')
 
-# Only setup logging if no handlers exist
-if not logger.handlers:
-    logger.setLevel(logging.INFO)
-
-    # Create a file handler
-    file_handler = logging.FileHandler(__log_file__)
-    file_handler.setLevel(logging.INFO)
-
-    # Create a console handler for real-time logging
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-
-    # Create a formatter and set it for both handlers
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+def setup_logger(name, log_file, level=logging.INFO):
+    """Set up a new logger with consistent formatting"""
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    file_handler = logging.FileHandler(f'logs/{log_file}', delay=False)
     file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-
-    # Add the handlers to the logger
+    
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    logger.handlers = []  # Clear existing handlers
     logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
+    logger.propagate = False
+    
+    return logger
+
+# Main application logger
+app_logger = setup_logger('twitta', 'twitta.log')
+web_logger = setup_logger('twitta_web', 'web.log')
+api_logger = setup_logger('twitta_api', 'api.log')

@@ -4,7 +4,7 @@ import requests
 import subprocess
 import os
 from packaging import version
-from log import logger
+from log import app_logger as logger
 
 __version__ = "0.2.5"
 APP_REPO = "https://api.github.com/repos/steelproxy/twitta/releases/latest"

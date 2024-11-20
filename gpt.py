@@ -1,5 +1,5 @@
 import openai
-from log import logger
+from log import app_logger as logger
 
 def get_chatgpt_response(prompt):
     try:

@@ -8,8 +8,8 @@ import x_api
 import os
 import logging
 import json
-
-__log_file__ = 'twitta_server.log'
+from log import web_logger, api_logger
+from collections import deque
 
 class User(UserMixin):
     def __init__(self, username):
@@ -27,22 +27,26 @@ class TwitterBotServer:
 
     def _setup_logging(self, config):
         """Configure logging for Flask and Werkzeug"""
-        self.logger = logging.getLogger('twitta_web')
+        self.logger = web_logger
+        self.api_logger = api_logger
+        
+        # Set log levels
         self.logger.setLevel(logging.getLevelName(config['web_interface']['log_level']))
-        self.logger.handlers = []
+        self.api_logger.setLevel(logging.getLevelName(config['web_interface']['log_level']))
         
-        file_handler = logging.FileHandler(__log_file__)
-        file_handler.setLevel(logging.getLevelName(config['web_interface']['log_level']))
+        # Force immediate flush after each log entry
+        for handler in self.logger.handlers:
+            handler.flush()
+            handler.terminator = "\n"
         
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        file_handler.setFormatter(formatter)
-        self.logger.addHandler(file_handler)
+        for handler in self.api_logger.handlers:
+            handler.flush()
+            handler.terminator = "\n"
         
         # Configure werkzeug logging
         werkzeug_logger = logging.getLogger('werkzeug')
         werkzeug_logger.setLevel(logging.WARNING)
-        werkzeug_logger.handlers = []
-        werkzeug_logger.addHandler(file_handler)
+        werkzeug_logger.addHandler(self.logger.handlers[0])
 
     def _init_server(self, config, x_api_client):
         """Initialize server variables"""
@@ -50,7 +54,6 @@ class TwitterBotServer:
         self.config = config
         self.client = x_api_client
         self.bot_thread = None
-        self.log_file = __log_file__
         self.server_start_time = x_api.start_time
         self.config_file_path = os.getenv('CONFIG_PATH', 'config.json')
         
@@ -171,11 +174,10 @@ class TwitterBotServer:
         self.running = True
         self.start_time = datetime.now()
         self.status_message = "Bot is running"
-        self.logger.info("Bot thread started")
+        self.api_logger.info("Bot thread started")
         
         def update_status(message):
             self.status_message = message
-            self.logger.info(message)
             
         def update_tweet_count(count):
             self.tweet_count = count
@@ -184,7 +186,6 @@ class TwitterBotServer:
         def handle_error(error_msg):
             self.error_count += 1
             self.status_message = f"Error: {error_msg}"
-            self.logger.error(self.status_message)
         
         # Register callbacks
         x_api.register_callbacks(
@@ -296,12 +297,16 @@ class TwitterBotServer:
         @self.app.route('/api/logs')
         @login_required
         def get_logs():
-            return self._handle_get_logs(self.log_file)
-
-        @self.app.route('/api/bot_logs')
-        @login_required
-        def get_bot_logs():
-            return self._handle_get_logs('twitta.log')
+            """Get log entries based on source"""
+            source = request.args.get('source', 'web')
+            if source == 'web':
+                return self._handle_get_logs('logs/web.log')
+            elif source == 'api':
+                return self._handle_get_logs('logs/api.log')
+            elif source == 'app':
+                return self._handle_get_logs('logs/twitta.log', tail=False)  # Set tail=False to show all entries
+            else:
+                return jsonify({"logs": ["Invalid log source specified"]}), 400
 
         @self.app.route('/accounts', methods=['GET'])
         @login_required
@@ -368,10 +373,26 @@ class TwitterBotServer:
             "status_message": self.status_message
         })
 
-    def _handle_get_logs(self, log_file):
-        """Handle log request"""
-        logs = self._get_log_entries(log_file)
-        return jsonify({"logs": logs})
+    def _handle_get_logs(self, log_file, tail=True):
+        """Read log file contents"""
+        try:
+            if not os.path.exists(log_file):
+                return jsonify({"logs": ["No log file found"]})
+            
+            with open(log_file, 'r') as f:
+                if tail:
+                    # Get last 100 lines for web and API logs
+                    lines = deque(f, 100)
+                else:
+                    # Get all lines for application log
+                    lines = f.readlines()
+                
+                # Clean up line endings consistently
+                cleaned_lines = [line.rstrip('\n') for line in lines]
+                return jsonify({"logs": cleaned_lines})
+        except Exception as e:
+            self.api_logger.error(f"Error reading log file: {str(e)}")
+            return jsonify({"logs": ["Error reading log file"]})
 
     def _handle_manage_accounts(self):
         """Handle accounts page request"""
