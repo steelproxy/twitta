@@ -300,13 +300,13 @@ class TwitterBotServer:
     def _handle_get_status(self):
         """Handle status request"""
         uptime = str(datetime.now() - self.start_time) if self.start_time else "Not started"
-        last_tweet_ago = str(datetime.now() - self.last_tweet) if self.last_tweet else "Never"
+        last_tweet = self.last_tweet.isoformat() if self.last_tweet else None
         
         return jsonify({
             "running": self.running,
             "uptime": uptime,
             "tweet_count": len(x_api.replied_tweet_ids),
-            "last_tweet": last_tweet_ago,
+            "last_tweet": last_tweet,
             "error_count": self.error_count,
             "status_message": self.status_message
         })

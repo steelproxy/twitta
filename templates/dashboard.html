@@ -116,8 +116,13 @@
 document.addEventListener('DOMContentLoaded', function() {
     function formatTimestamp(timestamp) {
         if (!timestamp) return 'Never';
-        const date = new Date(timestamp);
-        return date.toLocaleString();
+        try {
+            const date = new Date(timestamp);
+            if (isNaN(date.getTime())) return 'Invalid Date';
+            return date.toLocaleString();
+        } catch (e) {
+            return 'Invalid Date';
+        }
     }
 
     function updateStatus() {
