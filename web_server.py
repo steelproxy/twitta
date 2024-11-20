@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request, render_template, redirect, url_for, f
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import x_api
 import os
@@ -10,6 +10,9 @@ import logging
 import json
 from log import web_logger, api_logger
 from collections import deque
+from flask_wtf.csrf import CSRFProtect
+import re
+from bleach import clean
 
 class User(UserMixin):
     def __init__(self, username):
@@ -43,6 +46,13 @@ class TwitterBotServer:
     def _init_server(self, config, x_api_client):
         """Initialize server variables"""
         self.app.secret_key = config['web_interface']['secret_key']
+        self.app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
+        self.app.config['SESSION_COOKIE_SECURE'] = True
+        self.app.config['SESSION_COOKIE_HTTPONLY'] = True
+        self.app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+        self.app.config['REMEMBER_COOKIE_SECURE'] = True
+        self.app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+        CSRFProtect(self.app)
         self.config = config
         self.client = x_api_client
         self.bot_thread = None
@@ -400,19 +410,45 @@ class TwitterBotServer:
             "running": self.running
         })
 
-    def _handle_update_account(self):
-        """Update or add account configuration"""
-        data = request.json
-        username = data.get('username', '').strip('@')
+    def _sanitize_username(self, username):
+        """Sanitize and validate Twitter username"""
         if not username:
-            return jsonify({"status": "error", "message": "Username is required"}), 400
+            return None
+        # Remove @ symbol and whitespace
+        username = username.strip().strip('@')
+        # Only allow alphanumeric and underscore, max 15 chars
+        if not re.match(r'^[A-Za-z0-9_]{1,15}$', username):
+            return None
+        return username
 
-        # Create new account object matching config structure
+    def _sanitize_text(self, text, max_length=1000):
+        """Sanitize text input"""
+        if not text:
+            return ""
+        # Clean HTML tags and limit length
+        return clean(text[:max_length])
+
+    def _handle_update_account(self):
+        """Update or add account configuration with validation"""
+        data = request.json
+        username = self._sanitize_username(data.get('username', ''))
+        if not username:
+            return jsonify({"status": "error", "message": "Invalid username format"}), 400
+
+        # Sanitize other inputs
+        custom_prompt = self._sanitize_text(data.get('custom_prompt', ''))
+        predefined_replies = [
+            self._sanitize_text(reply) 
+            for reply in data.get('predefined_replies', [])
+            if reply
+        ]
+
+        # Create new account object with sanitized data
         new_account = {
             "username": username,
-            "use_gpt": data.get('use_gpt', True),
-            "custom_prompt": data.get('custom_prompt', ""),
-            "predefined_replies": data.get('predefined_replies', [])
+            "use_gpt": bool(data.get('use_gpt', True)),
+            "custom_prompt": custom_prompt,
+            "predefined_replies": predefined_replies
         }
 
         # Find and update existing account or add new one
@@ -432,10 +468,10 @@ class TwitterBotServer:
         })
 
     def _handle_delete_account(self):
-        """Delete account from configuration"""
-        username = request.json.get('username', '').strip('@')
+        """Delete account from configuration with validation"""
+        username = self._sanitize_username(request.json.get('username', ''))
         if not username:
-            return jsonify({"status": "error", "message": "Username is required"}), 400
+            return jsonify({"status": "error", "message": "Invalid username format"}), 400
 
         accounts = self.config['accounts_to_reply']
         initial_length = len(accounts)
