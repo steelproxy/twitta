@@ -6,4 +6,3 @@ requests>=2.0.0
 jsonschema>=3.0.0
 werkzeug>=2.0.0
 packaging>=21.0.0
-bleach>=6.0.0

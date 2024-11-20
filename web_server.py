@@ -10,8 +10,6 @@ import logging
 import json
 from log import web_logger, api_logger
 from collections import deque
-import re
-from bleach import clean
 
 class User(UserMixin):
     def __init__(self, username):
@@ -45,12 +43,6 @@ class TwitterBotServer:
     def _init_server(self, config, x_api_client):
         """Initialize server variables"""
         self.app.secret_key = config['web_interface']['secret_key']
-        self.app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
-        self.app.config['SESSION_COOKIE_SECURE'] = True
-        self.app.config['SESSION_COOKIE_HTTPONLY'] = True
-        self.app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-        self.app.config['REMEMBER_COOKIE_SECURE'] = True
-        self.app.config['REMEMBER_COOKIE_HTTPONLY'] = True
         self.config = config
         self.client = x_api_client
         self.bot_thread = None
@@ -408,30 +400,12 @@ class TwitterBotServer:
             "running": self.running
         })
 
-    def _sanitize_username(self, username):
-        """Sanitize and validate Twitter username"""
-        if not username:
-            return None
-        # Remove @ symbol and whitespace
-        username = username.strip().strip('@')
-        # Only allow alphanumeric and underscore, max 15 chars
-        if not re.match(r'^[A-Za-z0-9_]{1,15}$', username):
-            return None
-        return username
-
-    def _sanitize_text(self, text, max_length=1000):
-        """Sanitize text input"""
-        if not text:
-            return ""
-        # Clean HTML tags and limit length
-        return clean(text[:max_length])
-
     def _handle_update_account(self):
         """Update or add account configuration with validation"""
         data = request.json
-        username = self._sanitize_username(data.get('username', ''))
+        username = data.get('username', '').strip('@')
         if not username:
-            return jsonify({"status": "error", "message": "Invalid username format"}), 400
+            return jsonify({"status": "error", "message": "Username is required"}), 400
 
         # Sanitize other inputs
         custom_prompt = self._sanitize_text(data.get('custom_prompt', ''))
@@ -441,12 +415,12 @@ class TwitterBotServer:
             if reply
         ]
 
-        # Create new account object with sanitized data
+        # Create new account object matching config structure
         new_account = {
             "username": username,
-            "use_gpt": bool(data.get('use_gpt', True)),
-            "custom_prompt": custom_prompt,
-            "predefined_replies": predefined_replies
+            "use_gpt": data.get('use_gpt', True),
+            "custom_prompt": data.get('custom_prompt', ""),
+            "predefined_replies": data.get('predefined_replies', [])
         }
 
         # Find and update existing account or add new one
@@ -466,10 +440,10 @@ class TwitterBotServer:
         })
 
     def _handle_delete_account(self):
-        """Delete account from configuration with validation"""
-        username = self._sanitize_username(request.json.get('username', ''))
+        """Delete account from configuration"""
+        username = request.json.get('username', '').strip('@')
         if not username:
-            return jsonify({"status": "error", "message": "Invalid username format"}), 400
+            return jsonify({"status": "error", "message": "Username is required"}), 400
 
         accounts = self.config['accounts_to_reply']
         initial_length = len(accounts)
