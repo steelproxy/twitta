@@ -1,0 +1,8 @@
+flask>=2.0.0
+flask-login>=0.6.0
+tweepy>=4.0.0
+openai>=1.0.0
+requests>=2.0.0
+jsonschema>=3.0.0
+werkzeug>=2.0.0
+packaging>=21.0.0

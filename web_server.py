@@ -245,7 +245,7 @@ class TwitterBotServer:
         if request.method == 'POST':
             if not self._check_auth_attempts(ip):
                 self.logger.warning(f"Authentication failed - IP blocked: {ip} ({host}) [BANNED]")
-                return "Too many failed attempts", 403
+                return "Too many failed attempts", 429
                 
             username = request.form.get('username')
             password = request.form.get('password')
