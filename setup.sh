@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Creating virtual environment..."
-python3 -m venv .venv
+python3.12 -m venv .venv
 
 echo "Activating virtual environment..."
 source .venv/bin/activate
@@ -13,9 +13,9 @@ echo "Making script executable..."
 chmod +x ./twitta.py
 
 echo "Starting Twitta..."
-python3 twitta.py
+python3.12 twitta.py
 
 echo ""
 echo "If you want to run Twitta again later, just use:"
 echo "source .venv/bin/activate"
-echo "python3 twitta.py"
+echo "python3.12 twitta.py"
